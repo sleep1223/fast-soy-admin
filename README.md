@@ -20,12 +20,12 @@
 [![ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 
-<span><a href="./README.zh_CN.md">English</a> | 中文</span>
+<span><a href="./README.en.md">English</a> | 中文</span>
 
 </div>
 
 > [!NOTE]
-> 如果您觉得 `FastSoyAdmin`对您有所帮助，或者您喜欢我们的项目，请在 GitHub 上给我们一个 ⭐️。您的支持是我们持续改进和增加新功能的动力！感谢您的支持！
+> 如果您觉得 `FastSoyAdmin` 对您有所帮助，或者您喜欢我们的项目，请在 GitHub 上给我们一个 ⭐️。您的支持是我们持续改进和增加新功能的动力！感谢您的支持！
 
 ## 简介
 

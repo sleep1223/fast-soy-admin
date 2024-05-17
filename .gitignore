@@ -1,0 +1,25 @@
+__pycache__/
+.idea/
+venv/
+.venv/
+.vscode/
+.ruff_cache/
+.pytest_cache/
+
+# Tortoise ORM generated files
+.mypy_cache/
+*.sqlite3
+tortoise_queries.json
+tortoise_last.txt
+
+# Aerich migrations
+aerich.ini
+migrations/
+
+*.log
+*.sqlite3*
+
+.DS_Store
+._.DS_Store
+/.pdm-python
+/pdm.lock

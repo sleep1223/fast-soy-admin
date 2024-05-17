@@ -1,0 +1,94 @@
+[project]
+name = "fast-soy-admin"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    { name = "sleep1223", email = "sleep1223@outlook.com" },
+]
+dependencies = [
+    "fastapi>=0.111.0",
+    "tortoise-orm[asyncpg]>=0.20.1",
+    "pydantic>=2.7.1",
+    "pydantic-settings>=2.2.1",
+    "passlib>=1.7.4",
+    "pyjwt>=2.8.0",
+    "loguru>=0.7.2",
+    "aerich>=0.7.2",
+    "email-validator>=2.1.1",
+    "setuptools>=69.5.1",
+    "argon2-cffi>=23.1.0",
+]
+requires-python = ">=3.10"
+readme = "README.md"
+license = { text = "MIT" }
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+exclude = ["generated"]
+extend-select = [
+    "F",
+    "E",
+    "W",
+    "UP",
+    # "I",    # isort
+    # "B",    # flake8-bugbear
+    # "C4",   # flake8-comprehensions
+    # "PGH",  # pygrep-hooks
+    # "RUF",  # ruff
+    # "W",    # pycodestyle
+    # "YTT",  # flake8-2020
+]
+
+ignore = [
+    "F403",
+    "F405",
+    "E501", # Line too long
+    #    "I001", # isort
+]
+
+[tool.ruff.format]
+#quote-style = "single"
+#indent-style = "tab"
+#docstring-code-format = true
+
+[tool.pyright]
+include = ["app"]
+exclude = ["**/node_modules",
+    "**/__pycache__",
+    "src/experimental",
+    "src/typestubs",
+    "app/api/book/",
+    "app/api/v1/base/",
+    "app/api/v1/apis/",
+]
+
+ignore = [
+    "migrations", "src/oldstuff",
+]
+
+defineConstant = { DEBUG = false }
+stubPath = "src/stubs"
+
+reportMissingImports = true
+reportMissingTypeStubs = false
+
+reportIncompatibleVariableOverride = false
+
+[tool.pdm]
+distribution = false
+
+[tool.pdm.build]
+includes = []
+
+[[tool.pdm.source]]
+name = "tsinghua"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
+verify_ssl = true
+
+
+[tool.aerich]
+tortoise_orm = "app.settings.TORTOISE_ORM"
+location = "./migrations"
+src_folder = "./."

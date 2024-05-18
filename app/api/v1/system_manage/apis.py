@@ -5,7 +5,6 @@ from app.api.v1.utils import refresh_api_list, insert_log
 from app.controllers import user_controller
 from app.controllers.api import api_controller
 from app.core.ctx import CTX_USER_ID
-from app.core.dependency import DependAuth, DependPermission
 from app.models.system import Api, Role
 from app.models.system import LogType, LogDetailType
 from app.schemas.base import Success, SuccessExtra

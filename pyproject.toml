@@ -7,7 +7,7 @@ authors = [
 ]
 dependencies = [
     "fastapi>=0.111.0",
-    "tortoise-orm[asyncmy]>=0.20.1",
+    "tortoise-orm[aiosqlite]>=0.20.1",
     "pydantic>=2.7.1",
     "pydantic-settings>=2.2.1",
     "passlib>=1.7.4",
@@ -26,7 +26,7 @@ license = { text = "MIT" }
 line-length = 120
 
 [tool.ruff.lint]
-exclude = ["generated"]
+exclude = [ "web", "node_modules", "migrations", "src/experimental", "src/typestubs", "src/oldstuff" ]
 extend-select = [
     "F",
     "E",
@@ -55,13 +55,11 @@ ignore = [
 
 [tool.pyright]
 include = ["app"]
-exclude = ["**/node_modules",
+exclude = ["web",
+    "**/node_modules",
     "**/__pycache__",
     "src/experimental",
     "src/typestubs",
-    "app/api/book/",
-    "app/api/v1/base/",
-    "app/api/v1/apis/",
 ]
 
 ignore = [

@@ -93,7 +93,7 @@ async function search() {
           <NInput v-model:value="model.responseCode" :placeholder="$t('page.manage.log.form.responseCode')" />
         </NFormItemGi>
 
-        <NFormItemGi span="24 m:8" class="pr-24px">
+        <NFormItemGi span="24 m:9" class="pr-24px">
           <NSpace class="w-full" justify="end">
             <NButton @click="reset">
               <template #icon>

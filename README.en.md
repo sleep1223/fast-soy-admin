@@ -13,14 +13,17 @@
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![github stars](https://img.shields.io/github/stars/sleep1223/fast-soy-admin)](https://github.com/sleep1223/fast-soy-admin)
 [![github forks](https://img.shields.io/github/forks/sleep1223/fast-soy-admin)](https://github.com/sleep1223/fast-soy-admin)
-
 ![python](https://img.shields.io/badge/python-3.10+-blue?logo=python&logoColor=edb641)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?logo=python&logoColor=edb641)
+
+![Pydantic](https://img.shields.io/badge/Pydantic-005571?logo=pydantic&logoColor=edb641)
+![pdm-managed](https://img.shields.io/badge/pdm-managed-blueviolet)
 [![black](https://img.shields.io/badge/code%20style-black-000000.svg?logo=python&logoColor=edb641)](https://github.com/psf/black)
 [![pyright](https://img.shields.io/badge/types-pyright-797952.svg?logo=python&logoColor=edb641)](https://github.com/Microsoft/pyright)
 [![ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 
-<span><a href="./README.zh_CN.md">English</a> | 中文</span>
+<span>English | <a href="./README.md">中文</a></span>
 
 </div>
 
@@ -58,6 +61,8 @@ Sure! Here's the translation:
 - [Apifox Documentation](https://apifox.com/apidoc/shared-7cd78102-46eb-4701-88b1-3b49c006504b)
 - [GitHub Repository](https://github.com/sleep1223/fast-soy-admin)
 - [SoybeanAdmin](https://gitee.com/honghuangdc/soybean-admin)
+- [FastAPI](https://fastapi.tiangolo.com/)
+- [Tortoise ORM](https://tortoise.github.io)
 
 ## Example Images
 
@@ -98,7 +103,7 @@ git clone https://github.com/sleep1223/fast-soy-admin
 **Install Dependencies**
 
 ```bash
-pdm install or poery install
+pdm install or pip install -r requirements.txt
 cd web && pnpm i
 ```
 
@@ -114,7 +119,7 @@ pnpm dev
 
 back-end
 ```bash
-pdm run run.py 或者 poetry run run.py
+pdm run run.py or python run.py
 ```
 
 
@@ -129,37 +134,24 @@ pnpm build
 
 We warmly welcome and appreciate all forms of contributions. If you have any ideas or suggestions, please feel free to share them by submitting [pull requests](https://github.com/sleep1223/fast-soy-admin/pulls) or creating GitHub [issue](https://github.com/sleep1223/fast-soy-admin/issues/new).
 
-## Git Commit Guidelines
-
-This project has built-in `commit` command, you can execute `pnpm commit` to generate commit information that conforms to [Conventional Commits](https://www.conventionalcommits.org/) specification. When submitting PR, please be sure to use `commit` command to create commit information to ensure the standardization of information.
-
-
-## Browser Support
-
-It is recommended to use the latest version of Chrome in development for a better experience.
-
-| [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/archive/internet-explorer_9-11/internet-explorer_9-11_48x48.png" alt="IE" width="24px" height="24px"  />](http://godban.github.io/browsers-support-badges/) | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/edge/edge_48x48.png" alt=" Edge" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/) | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/firefox/firefox_48x48.png" alt="Firefox" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/) | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/chrome/chrome_48x48.png" alt="Chrome" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/) | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/safari/safari_48x48.png" alt="Safari" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/) |
-| --- | --- | --- | --- | --- |
-| not support | last 2 versions | last 2 versions | last 2 versions | last 2 versions |
-
-## OpenSource Author
-
-[Sleep1223](https://github.com/Sleep1223)
 
 
 ## Contributors
 
 Thanks the following people for their contributions. If you want to contribute to this project, please refer to [How to Contribute](#how-to-contribute).
 
+<a href="https://github.com/mizhexiaoxiao">
+    <img src="https://github.com/mizhexiaoxiao.png?size=120" width="64" height="64" style="border-radius:50%;" />
+</a>
+
+<a href="https://github.com/soybeanjs.png">
+    <img src="https://github.com/soybeanjs.png?size=120" width="64" height="64" style="border-radius:50%;" />
+</a>
+
 <a href="https://github.com/sleep1223/fast-soy-admin/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=sleep1223/fast-soy-admin" />
 </a>
 
-## Communication
-
-`FastSoyAdmin` is a completely open source and free project, helping developers to develop medium and large-scale management systems more conveniently. It also provides QQ communication groups. If you have any questions, please feel free to ask in the group.
-
-![QQ Group](https://raw.githubusercontent.com/sleep1223/fast-soy-admin-docs/51832d41f1d951bd9d61a9bcfdf137deb81fd3c5/src/assets/qqgroup.jpg)
 
 ## Star Trend
 

@@ -48,9 +48,6 @@ async function search() {
     <!-- <NForm ref="formRef" :model="model" :rules="rules" label-placement="left" :label-width="80"> -->
     <NForm ref="formRef" :model="model" label-placement="left" :label-width="80">
       <NGrid responsive="screen" item-responsive>
-        <NFormItemGi span="24 s:12 m:6" :label="$t('page.manage.api.path')" path="path" class="pr-24px">
-          <NInput v-model:value="model.path" :placeholder="$t('page.manage.api.form.path')" />
-        </NFormItemGi>
         <NFormItemGi span="24 s:12 m:6" :label="$t('page.manage.api.method')" path="method" class="pr-24px">
           <NSelect
             v-model:value="model.method"
@@ -58,6 +55,9 @@ async function search() {
             :options="translateOptions(apiMethodOptions)"
             clearable
           />
+        </NFormItemGi>
+        <NFormItemGi span="24 s:12 m:6" :label="$t('page.manage.api.path')" path="path" class="pr-24px">
+          <NInput v-model:value="model.path" :placeholder="$t('page.manage.api.form.path')" />
         </NFormItemGi>
         <NFormItemGi span="24 s:12 m:6" :label="$t('page.manage.api.summary')" path="summary" class="pr-24px">
           <NInput v-model:value="model.summary" :placeholder="$t('page.manage.api.form.summary')" />
@@ -73,7 +73,7 @@ async function search() {
             clearable
           />
         </NFormItemGi>
-        <NFormItemGi span="24 m:12" class="pr-24px">
+        <NFormItemGi span="24 m:18" class="pr-24px">
           <NSpace class="w-full" justify="end">
             <NButton @click="reset">
               <template #icon>

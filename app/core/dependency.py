@@ -8,7 +8,7 @@ from app.core.ctx import CTX_USER_ID
 from app.core.exceptions import (
     HTTPException,
 )
-from app.models.system import Role, User
+from app.models.system import Role, User, StatusType
 from app.settings import APP_SETTINGS
 from app.utils.tools import check_url
 
@@ -64,9 +64,11 @@ class PermissionControl:
         path = request.url.path
 
         apis = [await role.apis for role in user_roles]
-        permission_apis = list(set((api.method.value, api.path) for api in sum(apis, [])))
-        for (api_method, api_path) in permission_apis:
+        permission_apis = list(set((api.method.value, api.path, api.status) for api in sum(apis, [])))
+        for (api_method, api_path, api_status) in permission_apis:
             if api_method == method and check_url(api_path, request.url.path):  # API权限检测通过
+                if api_status == StatusType.disable:
+                    raise HTTPException(code="4030", msg=f"The API has been disabled, method: {method} path: {path}")
                 return
 
         raise HTTPException(code="4030", msg=f"Permission denied, method: {method} path: {path}")

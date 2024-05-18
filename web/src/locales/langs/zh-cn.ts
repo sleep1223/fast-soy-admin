@@ -415,7 +415,7 @@ const local: App.I18n.Schema = {
           method: '请选择请求方式',
           summary: '请输入API简介',
           tags: '请输入Tags',
-          status: '请选择API角色'
+          status: '请选择API状态'
         },
         addApi: '新增API',
         editApi: '编辑API',

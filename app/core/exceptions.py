@@ -33,7 +33,6 @@ class HTTPException(Exception):
 
 
 def BaseHandle(exc: Exception, handle_exc, code: int | str, msg: str, status_code: int = 500) -> JSONResponse:
-    print("test", JSONResponse(content=dict(code=str(code), msg=msg), status_code=status_code))
     if isinstance(exc, handle_exc):
         return JSONResponse(content=dict(code=str(code), msg=msg), status_code=status_code)
     else:

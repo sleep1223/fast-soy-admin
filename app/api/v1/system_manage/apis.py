@@ -14,7 +14,7 @@ from app.schemas.apis import ApiCreate, ApiUpdate
 router = APIRouter()
 
 
-@router.get("/apis", summary="查看API列表", dependencies=[DependAuth])
+@router.get("/apis", summary="查看API列表")
 async def _(
         current: int = Query(1, description="页码"),
         size: int = Query(10, description="每页数量"),
@@ -62,7 +62,7 @@ async def _(
     return SuccessExtra(data=data, total=total, current=current, size=size)
 
 
-@router.get("/apis/{api_id}", summary="查看API", dependencies=[DependPermission])
+@router.get("/apis/{api_id}", summary="查看API")
 async def _(api_id: int):
     api_obj = await api_controller.get(id=api_id)
     data = await api_obj.to_dict(exclude_fields=["id", "create_time", "update_time"])
@@ -91,7 +91,7 @@ def build_api_tree(apis: list[Api]):
     return parent_map["root"]["children"]
 
 
-@router.get("/apis/tree/", summary="查看API树", dependencies=[DependPermission])
+@router.get("/apis/tree/", summary="查看API树")
 async def _():
     api_objs = await Api.all()
     data = []
@@ -101,7 +101,7 @@ async def _():
     return Success(data=data)
 
 
-@router.post("/apis", summary="创建API", dependencies=[DependPermission])
+@router.post("/apis", summary="创建API")
 async def _(
         api_in: ApiCreate,
 ):
@@ -112,7 +112,7 @@ async def _(
     return Success(msg="Created Successfully", data={"created_id": new_api.id})
 
 
-@router.patch("/apis/{api_id}", summary="更新API", dependencies=[DependPermission])
+@router.patch("/apis/{api_id}", summary="更新API")
 async def _(
         api_id: int,
         api_in: ApiUpdate,
@@ -124,7 +124,7 @@ async def _(
     return Success(msg="Update Successfully", data={"updated_id": api_id})
 
 
-@router.delete("/apis/{api_id}", summary="删除API", dependencies=[DependPermission])
+@router.delete("/apis/{api_id}", summary="删除API")
 async def _(
         api_id: int,
 ):
@@ -133,7 +133,7 @@ async def _(
     return Success(msg="Deleted Successfully", data={"deleted_id": api_id})
 
 
-@router.delete("/apis", summary="批量删除API", dependencies=[DependPermission])
+@router.delete("/apis", summary="批量删除API")
 async def _(ids: str = Query(..., description="API ID列表, 用逗号隔开")):
     api_ids = ids.split(",")
     deleted_ids = []
@@ -145,7 +145,7 @@ async def _(ids: str = Query(..., description="API ID列表, 用逗号隔开")):
     return Success(msg="Deleted Successfully", data={"deleted_ids": deleted_ids})
 
 
-@router.post("/apis/refresh/", summary="刷新API列表", dependencies=[DependPermission])
+@router.post("/apis/refresh/", summary="刷新API列表")
 async def _():
     await refresh_api_list()
     await insert_log(log_type=LogType.UserLog, log_detail_type=LogDetailType.ApiRefresh, by_user_id=0)

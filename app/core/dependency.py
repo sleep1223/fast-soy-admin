@@ -36,6 +36,10 @@ class AuthControl:
             status, code, decode_data = check_token(token)
             if not status:
                 raise HTTPException(code=code, msg=decode_data)
+
+            if decode_data["data"]["tokenType"] != "accessToken":
+                raise HTTPException(code="4010", msg="The token is not an access token")
+
             user_id = decode_data["data"]["userId"]
 
         user = await User.filter(id=user_id).first()
@@ -53,17 +57,19 @@ class PermissionControl:
         if "R_SUPER" in user_roles_codes:  # 超级管理员
             return
 
-        method = request.method.lower()
-        path = request.url.path
         if not user_roles:
             raise HTTPException(code="4040", msg="The user is not bound to a role")
+
+        method = request.method.lower()
+        path = request.url.path
+
         apis = [await role.apis for role in user_roles]
         permission_apis = list(set((api.method.value, api.path) for api in sum(apis, [])))
         for (api_method, api_path) in permission_apis:
             if api_method == method and check_url(api_path, request.url.path):  # API权限检测通过
                 return
 
-        raise HTTPException(code="4030", msg=f"Permission denied, path: {path}, method: {method}")
+        raise HTTPException(code="4030", msg=f"Permission denied, method: {method} path: {path}")
 
 
 DependAuth = Depends(AuthControl.is_authed)

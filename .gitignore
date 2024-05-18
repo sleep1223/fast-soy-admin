@@ -21,42 +21,51 @@ migrations/
 
 .DS_Store
 ._.DS_Store
-/.pdm-python
-/pdm.lock
+.pdm-python
+pdm.lock
 
+
+web/packages/scripts/node_modules
 
 # Logs
-web/logs
-web/*.log
-web/npm-debug.log*
-web/yarn-debug.log*
-web/yarn-error.log*
-web/pnpm-debug.log*
-web/lerna-debug.log*
+/web/logs
+/web/*.log
+/web/npm-debug.log*
+/web/yarn-debug.log*
+/web/yarn-error.log*
+/web/pnpm-debug.log*
+/web/lerna-debug.log*
 
-web/node_modules
-web/.DS_Store
-web/dist
-web/dist-ssr
-web/coverage
-web/*.local
+/web/node_modules
+/web/.DS_Store
+/web/dist
+/web/dist-ssr
+/web/coverage
+/web/*.local
 
-web//cypress/videos/
-web//cypress/screenshots/
+/web/cypress/videos/
+/web/cypress/screenshots/
 
 # Editor directories and files
-web/.vscode/*
-web/!.vscode/extensions.json
-web/!.vscode/settings.json
-web/!.vscode/launch.json
-web/.idea
-web/*.suo
-web/*.ntvs*
-web/*.njsproj
-web/*.sln
-web/*.sw?
+/web/.vscode/*
+/web/!.vscode/extensions.json
+/web/!.vscode/settings.json
+/web/!.vscode/launch.json
+/web/.idea
+/web/*.suo
+/web/*.ntvs*
+/web/*.njsproj
+/web/*.sln
+/web/*.sw?
 
-web/package-lock.json
-web/yarn.lock
+/web/package-lock.json
+/web/yarn.lock
 
-web/.VSCodeCounter
+/web/.VSCodeCounter
+/web/packages/axios/node_modules/*
+/web/packages/color/node_modules/*
+/web/packages/hooks/node_modules/*
+/web/packages/materials/node_modules/*
+/web/packages/ofetch/node_modules/*
+web/packages/utils/node_modules/*
+/web/pnpm-lock.yaml

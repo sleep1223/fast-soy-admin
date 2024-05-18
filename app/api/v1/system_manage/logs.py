@@ -15,7 +15,7 @@ from app.schemas.logs import LogUpdate, LogSearch
 router = APIRouter()
 
 
-@router.get("/logs", summary="查看日志列表", dependencies=[DependAuth])
+@router.get("/logs", summary="查看日志列表")
 async def _(log_in: LogSearch = Depends()):
     q = Q()
     if log_in.log_type:
@@ -43,15 +43,12 @@ async def _(log_in: LogSearch = Depends()):
 
     if log_in.log_type is None:
         log_in.log_type = LogType.ApiLog
-        print("log_in.log_type is None")
 
     if log_in.current is None:
         log_in.current = 1
-        print("log_in.current is None")
 
     if log_in.size is None:
         log_in.size = 10
-        print("log_in.size is None")
 
     if "R_ADMIN" in user_role_codes and log_in.log_type not in [LogType.ApiLog, LogType.UserLog]:  # 管理员只能查看API日志和用户日志
         return Fail(msg="Permission Denied")
@@ -79,14 +76,14 @@ async def _(log_in: LogSearch = Depends()):
     return SuccessExtra(data=data, total=total, current=log_in.current, size=log_in.size)
 
 
-@router.get("/logs/{log_id}", summary="查看日志", dependencies=[DependPermission])
+@router.get("/logs/{log_id}", summary="查看日志")
 async def _(log_id: int):
     log_obj = await log_controller.get(id=log_id)
     data = await log_obj.to_dict(exclude_fields=["id", "create_time", "update_time"])
     return Success(data=data)
 
 
-@router.patch("/logs/{log_id}", summary="更新日志", dependencies=[DependPermission])
+@router.patch("/logs/{log_id}", summary="更新日志")
 async def _(
         log_id: int,
         log_in: LogUpdate,
@@ -95,7 +92,7 @@ async def _(
     return Success(msg="Update Successfully")
 
 
-@router.delete("/logs/{log_id}", summary="删除日志", dependencies=[DependPermission])
+@router.delete("/logs/{log_id}", summary="删除日志")
 async def _(
         log_id: int,
 ):
@@ -103,7 +100,7 @@ async def _(
     return Success(msg="Deleted Successfully", data={"deleted_id": log_id})
 
 
-@router.delete("/logs", summary="批量删除日志", dependencies=[DependPermission])
+@router.delete("/logs", summary="批量删除日志")
 async def _(ids: str = Query(..., description="日志ID列表, 用逗号隔开")):
     log_ids = ids.split(",")
     deleted_ids = []

@@ -20,7 +20,7 @@ from app.core.exceptions import (
     ResponseValidationHandle,
 )
 from app.core.middlewares import BackGroundTaskMiddleware, APILoggerMiddleware, APILoggerAddResponseMiddleware
-from app.models.system import Menu, Role, User, Button
+from app.models.system import Menu, Role, User, Button, Api
 from app.models.system import StatusType, IconType, MenuType
 from app.settings import APP_SETTINGS
 
@@ -582,6 +582,22 @@ async def init_users():
 
         # 管理员拥有 首页 关于 系统管理-API管理 系统管理-用户管理
         role_admin = await Role.create(role_name="管理员", role_code="R_ADMIN", role_desc="管理员")
+
+        role_admin_apis = [
+            ("get", "/api/v1/system-manage/logs"),
+            ("get", "/api/v1/system-manage/apis"),
+            ("get", "/api/v1/system-manage/users"),
+            ("get", "/api/v1/system-manage/roles"),
+            ("post", "/api/v1/system-manage/users"),  #新增用户
+            ("patch", "/api/v1/system-manage/users/{user_id}"),  #修改用户
+            ("delete", "/api/v1/system-manage/users/{user_id}"),  #删除用户
+            ("delete", "/api/v1/system-manage/users"),  #批量删除用户
+
+        ]
+        for api_method, api_path in role_admin_apis:
+            api_obj: Api = await Api.get(method=api_method, path=api_path)
+            await role_admin.apis.add(api_obj)
+
         role_admin_menus = ["home", "about", "function_toggle-auth", "manage_log", "manage_api", "manage_user"]
         for route_name in role_admin_menus:
             menu_obj: Menu = await Menu.get(route_name=route_name)
@@ -593,6 +609,11 @@ async def init_users():
 
         # 普通用户拥有 首页 关于 系统管理-API管理
         role_user = await Role.create(role_name="普通用户", role_code="R_USER", role_desc="普通用户")
+        role_user_apis = [("get", "/api/v1/system-manage/logs"), ("get", "/api/v1/system-manage/apis")]
+        for api_method, api_path in role_user_apis:
+            api_obj: Api = await Api.get(method=api_method, path=api_path)
+            await role_user.apis.add(api_obj)
+
         role_user_menus = ["home", "about", "function_toggle-auth", "manage_log", "manage_api"]
         for route_name in role_user_menus:
             menu_obj: Menu = await Menu.get(route_name=route_name)

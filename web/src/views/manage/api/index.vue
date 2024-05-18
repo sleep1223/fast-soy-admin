@@ -192,6 +192,7 @@ function edit(id: number) {
               </template>
               {{ $t('common.refreshAPI') }}
             </NButton>
+            <span></span>
           </template>
         </TableHeaderOperation>
       </template>

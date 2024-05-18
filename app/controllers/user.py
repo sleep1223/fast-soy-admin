@@ -2,7 +2,7 @@ from datetime import datetime
 
 from app.core.crud import CRUDBase
 from app.core.exceptions import HTTPException
-from app.models.system import Role, User, Log
+from app.models.system import Role, User, Log, StatusType
 from app.models.system import LogType, LogDetailType
 from app.schemas.login import CredentialsSchema
 from app.schemas.users import UserCreate, UserUpdate
@@ -42,14 +42,14 @@ class UserController(CRUDBase[User, UserCreate, UserUpdate]):
         user = await self.model.filter(user_name=credentials.user_name).first()
         if not user:
             await Log.create(log_type=LogType.UserLog, by_user=None, log_detail_type=LogDetailType.UserLoginUserNameVaild)
-            raise HTTPException(code="4040", msg="用户名或密码错误!")
+            raise HTTPException(code="4040", msg="Incorrect username or password!")
         verified = verify_password(credentials.password, user.password)
         if not verified:
             await Log.create(log_type=LogType.UserLog, by_user=None, log_detail_type=LogDetailType.UserLoginErrorPassword)
-            raise HTTPException(code="4040", msg="用户名或密码错误!")
-        if not user.status:
+            raise HTTPException(code="4040", msg="Incorrect username or password!")
+        if user.status == StatusType.disable:
             await Log.create(log_type=LogType.UserLog, by_user=None, log_detail_type=LogDetailType.UserLoginForbid)
-            raise HTTPException(code="4030", msg="用户已被禁用")
+            raise HTTPException(code="4030", msg="This user has been disabled.")
         return user
 
     @staticmethod

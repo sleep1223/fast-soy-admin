@@ -7,7 +7,7 @@ authors = [
 ]
 dependencies = [
     "fastapi>=0.111.0",
-    "tortoise-orm[asyncpg]>=0.20.1",
+    "tortoise-orm[asyncmy]>=0.20.1",
     "pydantic>=2.7.1",
     "pydantic-settings>=2.2.1",
     "passlib>=1.7.4",

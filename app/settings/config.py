@@ -41,7 +41,19 @@ class Settings(BaseSettings):
             # "conn_book": {
             #     "engine": "tortoise.backends.sqlite",
             #     "credentials": {"file_path": f"{BASE_DIR}/db_book.sqlite3"},
-            # }
+            # },
+
+            # if you want to use MySQL, you need to install tortoise-orm[asyncmy]
+            # "conn_book": {
+            #     "engine": "tortoise.backends.mysql",
+            #     "credentials": {
+            #         "host": "huawei.sleep0.com",
+            #         "port": 63306,
+            #         "user": "root",
+            #         "password": "hsyqweQWE123",
+            #         "database": "fast-soy-admin"
+            #     }
+            # },
         },
         "apps": {
             "app_system": {"models": ["app.models.system", "aerich.models"], "default_connection": "conn_system"},

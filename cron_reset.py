@@ -23,14 +23,12 @@ async def init():
     # await Tortoise._drop_databases()
     # await Tortoise.close_connections()
     conn = Tortoise.get_connection("conn_system")
-    print("conn", conn)
 
     # 获取所有表名
     total, tables = await conn.execute_query('SELECT tablename FROM pg_tables WHERE schemaname = \'public\';')
     # 删除所有表
     for table in tables:
         table_name = table[0]
-        print("table_name", table_name)
         if table_name != "aerich":
             await conn.execute_query(f'TRUNCATE TABLE "{table_name}" RESTART IDENTITY CASCADE;')
 

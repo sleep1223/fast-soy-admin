@@ -6,7 +6,7 @@ from app.api.v1.utils import insert_log
 from app.controllers.user import user_controller
 from app.core.ctx import CTX_USER_ID
 from app.core.dependency import DependAuth, check_token
-from app.models.system import User, Role, Button
+from app.models.system import User, Role, Button, StatusType
 from app.models.system import LogDetailType, LogType
 from app.schemas.base import Fail, Success
 from app.schemas.login import CredentialsSchema, JWTOut, JWTPayload
@@ -25,9 +25,9 @@ async def _(credentials: CredentialsSchema):
         iat=datetime.now(timezone.utc),
         exp=datetime.now(timezone.utc)
     )
-    access_token_payload = payload.model_copy()
+    access_token_payload = payload.model_copy(deep=True)
     access_token_payload.exp += timedelta(minutes=APP_SETTINGS.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
-    refresh_token_payload = payload.model_copy()
+    refresh_token_payload = payload.model_copy(deep=True)
     refresh_token_payload.data["tokenType"] = "refreshToken"
     refresh_token_payload.exp += timedelta(minutes=APP_SETTINGS.JWT_REFRESH_TOKEN_EXPIRE_MINUTES)
     data = JWTOut(
@@ -41,12 +41,20 @@ async def _(credentials: CredentialsSchema):
 @router.post("/refreshToken", summary="刷新认证")
 async def _(jwt_token: JWTOut):
     if not jwt_token.refresh_token:
-        return Fail(code="4000", msg="refreshToken不能为空")
+        return Fail(code="4000", msg="The refreshToken is not valid.")
     status, code, data = check_token(jwt_token.refresh_token)
     if not status:
         return Fail(code=code, msg=data)
     user_id = data["data"]["userId"]
     user_obj = await user_controller.get(user_id)
+
+    if data["data"]["tokenType"] != "refreshToken":
+        return Fail(code="4000", msg="The token is not an refresh token.")
+
+    if user_obj.status == StatusType.disable:
+        await insert_log(log_type=LogType.UserLog, log_detail_type=LogDetailType.UserLoginForbid, by_user_id=user_id)
+        return Fail(code="4030", msg="This user has been disabled.")
+
     await user_controller.update_last_login(user_id)
     payload = JWTPayload(
         data={"userId": user_obj.id, "userName": user_obj.user_name, "tokenType": "accessToken"},

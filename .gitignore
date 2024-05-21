@@ -22,7 +22,6 @@ migrations/
 .DS_Store
 ._.DS_Store
 .pdm-python
-pdm.lock
 
 
 web/packages/scripts/node_modules
@@ -58,9 +57,6 @@ web/packages/scripts/node_modules
 /web/*.sln
 /web/*.sw?
 
-/web/package-lock.json
-/web/yarn.lock
-
 /web/.VSCodeCounter
 /web/packages/axios/node_modules/*
 /web/packages/color/node_modules/*
@@ -68,4 +64,3 @@ web/packages/scripts/node_modules
 /web/packages/materials/node_modules/*
 /web/packages/ofetch/node_modules/*
 web/packages/utils/node_modules/*
-/web/pnpm-lock.yaml

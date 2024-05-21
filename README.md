@@ -84,6 +84,33 @@
 
 ## 使用
 
+### 方法一
+**克隆项目**
+
+```bash
+$ git clone https://github.com/sleep1223/fast-soy-admin
+```
+
+**Docker Compose部署**
+
+```bash
+$ sudo docker compose up -d
+```
+
+**查看日志**
+```bash
+$ sudo docker compose logs -f # 查看所有日志
+$ sudo docker compose logs -f app # 单独查看 FastAPI 日志
+$ sudo docker compose logs -f nginx # 单独查看 Nginx 日志
+$ sudo docker compose logs -f web # 单独查看 pnpm build 日志
+```
+
+**改动重新部署**
+```bash
+$ sudo docker compose down && sudo docker compose up -d
+```
+
+### 方法二
 **环境准备**
 
 确保你的环境满足以下要求：
@@ -96,14 +123,14 @@
 **克隆项目**
 
 ```bash
-git clone https://github.com/sleep1223/fast-soy-admin
+$ git clone https://github.com/sleep1223/fast-soy-admin
 ```
 
 **安装依赖**
 
 ```bash
-pdm install 或者 pip install -r requirements.txt
-cd web && pnpm i
+$ pdm install 或者 pip install -r requirements.txt
+$ cd web && pnpm i
 ```
 > 由于本项目采用了 pnpm monorepo 的管理方式，因此请不要使用 npm 或 yarn 来安装依赖。
 
@@ -111,23 +138,26 @@ cd web && pnpm i
 
 前端
 ```bash
-pnpm dev
+$ cd web && pnpm dev
 ```
 
 后端
 ```bash
-pdm run run.py 或者 python run.py
+$ pdm run run.py 或者 python run.py
 ```
 
 **构建项目**
 
 ```bash
-pnpm build
+$ cd web && pnpm build
 ```
+
 
 ## TODO
 - [ ] 使用 Redis 优化响应速度
-- [ ] 使用 Redis 优化响应速度
+- [x] 使用 Docker 部署
+- [ ] 集成 FastCURD
+
 
 ## 如何贡献
 

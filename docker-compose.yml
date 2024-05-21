@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  web:
+    image: gplane/pnpm:9.1.2-node18-alpine
+    working_dir: /opt/fast-soy-admin/web
+    volumes:
+      - ./web:/opt/fast-soy-admin/web
+    command: >
+      sh -c "
+        cd /opt/fast-soy-admin/web &&
+        pnpm install --frozen-lockfile &&
+        pnpm run build
+      "
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "1880:80"
+    environment:
+      - LANG=zh_CN.UTF-8
+    volumes:
+      - ./web/dist:/var/www/html/fast-soy-admin
+      - ./deploy/web.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - web
+      - app
+    restart: always
+    networks:
+      - internal
+
+  app:
+    image: seven45/pdm-ci:3.11-alpine
+    working_dir: /opt/fast-soy-admin
+    command: >
+      sh -c "
+        pdm config pypi.url https://pypi.tuna.tsinghua.edu.cn/simple/ &&
+        pdm install --frozen-lockfile --no-editable &&
+        pdm run run.py
+      "
+    environment:
+      - LANG=zh_CN.UTF-8
+    volumes:
+      - .:/opt/fast-soy-admin
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge

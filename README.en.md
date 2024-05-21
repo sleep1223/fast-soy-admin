@@ -85,6 +85,33 @@ Sure! Here's the translation:
 
 ## Usage
 
+### Method 1
+**Clone the project**
+
+```bash
+$ git clone https://github.com/sleep1223/fast-soy-admin
+```
+
+**Deploy using Docker Compose**
+
+```bash
+$ sudo docker compose up -d
+```
+
+**View logs**
+```bash
+$ sudo docker compose logs -f # View all logs
+$ sudo docker compose logs -f app # View FastAPI logs only
+$ sudo docker compose logs -f nginx # View Nginx logs only
+$ sudo docker compose logs -f web # View pnpm build logs only
+```
+
+**Redeploy after changes**
+```bash
+$ sudo docker compose down && sudo docker compose up -d
+```
+
+### Method 2
 Make sure your environment meets the following requirements:
 
 - **git**: you need git to clone and manage project versions.
@@ -103,8 +130,8 @@ git clone https://github.com/sleep1223/fast-soy-admin
 **Install Dependencies**
 
 ```bash
-pdm install or pip install -r requirements.txt
-cd web && pnpm i
+$ pdm install 或者 pip install -r requirements.txt
+$ cd web && pnpm i
 ```
 
 > Since this project uses the pnpm monorepo management method, please do not use npm or yarn to install dependencies.
@@ -114,20 +141,26 @@ cd web && pnpm i
 
 front-end
 ```bash
-pnpm dev
+$ cd web && pnpm dev
 ```
 
 back-end
 ```bash
-pdm run run.py or python run.py
+$ pdm run run.py 或者 python run.py
 ```
 
 
 **Build Project**
 
 ```bash
-pnpm build
+$ cd web && pnpm build
 ```
+
+
+## TODO
+- [ ] Optimize response speed using Redis
+- [x] Deploy using Docker
+- [ ] Integrate FastCURD
 
 
 ## How to Contribute

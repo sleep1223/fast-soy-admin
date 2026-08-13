@@ -8,8 +8,14 @@
 """
 
 import pytest
+from sqids import Sqids
 
-from app.core.sqids import decode_id, encode_id
+from app.core.config import APP_SETTINGS
+from app.core.sqids import _MIN_LENGTH, _derive_alphabet, decode_id, encode_id
+
+
+def _new_sqids(secret: str) -> Sqids:
+    return Sqids(alphabet=_derive_alphabet(secret), min_length=_MIN_LENGTH)
 
 
 class TestEncodeDecode:
@@ -30,8 +36,13 @@ class TestEncodeDecode:
         assert len(encode_id(10_000_000)) >= 8
 
     def test_deterministic_output_for_same_secret(self):
-        """同一实例/同一 SECRET_KEY 对同一数字应产出相同 sqid。"""
-        assert encode_id(12345) == encode_id(12345)
+        """相同密钥派生出的独立实例应产生一致、可互解的结果。"""
+        first = _new_sqids("fixed-test-secret")
+        second = _new_sqids("fixed-test-secret")
+
+        encoded = first.encode([12345])
+        assert encoded == second.encode([12345])
+        assert second.decode(encoded) == [12345]
 
 
 class TestDecodeErrors:
@@ -43,6 +54,7 @@ class TestDecodeErrors:
         with pytest.raises(ValueError, match="invalid sqid"):
             decode_id("!!!!@@@@")
 
-    def test_decode_gibberish_raises(self):
+    def test_decode_multiple_numbers_raises(self):
+        payload = _new_sqids(APP_SETTINGS.SECRET_KEY).encode([1, 2])
         with pytest.raises(ValueError, match="invalid sqid"):
-            decode_id("not-a-valid-sqid")
+            decode_id(payload)

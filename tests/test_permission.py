@@ -21,36 +21,21 @@ from app.system.models import StatusType
 TEST_ROLE = "R_PERM_TEST"
 
 
-def _walk_routes(route, seen: set[tuple[str, str]]):
-    """递归遍历 APIRouter / _IncludedRouter，产出所有 APIRoute。"""
-    if isinstance(route, APIRoute):
-        for m in route.methods:
-            m_lower = m.lower()
-            if m_lower in {"head", "options"}:
-                continue
-            key = (m_lower, route.path_format)
-            if key in seen:
-                continue
-            seen.add(key)
-            yield m_lower, route.path_format, route
-        return
-
-    # FastAPI >= 0.110 用 _IncludedRouter 包装被 include_router 的路由器
-    if hasattr(route, "original_router"):
-        for child in route.original_router.routes:
-            yield from _walk_routes(child, seen)
-        return
-
-    if hasattr(route, "routes"):
-        for child in route.routes:
-            yield from _walk_routes(child, seen)
-
-
 def _all_routes(app):
     """枚举所有 APIRoute 的 (method, path_format)，跳过 HEAD/OPTIONS。"""
     seen: set[tuple[str, str]] = set()
     for r in app.routes:
-        yield from _walk_routes(r, seen)
+        if not isinstance(r, APIRoute):
+            continue
+        for m in r.methods:
+            m_lower = m.lower()
+            if m_lower in {"head", "options"}:
+                continue
+            key = (m_lower, r.path_format)
+            if key in seen:
+                continue
+            seen.add(key)
+            yield m_lower, r.path_format, r
 
 
 def _build_request(app, route: APIRoute, method: str) -> Request:

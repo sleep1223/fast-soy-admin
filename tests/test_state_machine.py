@@ -1,10 +1,10 @@
 """StateMachine 状态机单元测试。
 
 覆盖点：
-- 允许的状态流转成功执行并更新对象字段
+- 允许的状态流转成功执行并调用模型保存接口
 - 不允许的流转抛出 TransitionError
 - 对 Enum 类型当前状态的支持
-- 日志函数与 extra_updates 的调用
+- 自定义状态字段、错误码、日志函数与 extra_updates
 - 终态无目标时 allowed_targets 为空
 """
 
@@ -30,19 +30,22 @@ class FakeStatus(str, Enum):
 class FakeModel:
     id: int = 1
     status: str | FakeStatus = "pending"
+    phase: str = "pending"
     closed_at: str | None = None
     _saved_fields: list[str] = field(default_factory=list)
+    _save_calls: int = 0
 
     @property
     def pk(self) -> int:
         return self.id
 
-    def update_from_dict(self, data: dict) -> "FakeModel":
+    def update_from_dict(self, data: dict[str, object]) -> "FakeModel":
         for k, v in data.items():
             setattr(self, k, v)
         return self
 
     async def save(self, update_fields: list[str] | None = None) -> None:
+        self._save_calls += 1
         self._saved_fields = list(update_fields or [])
 
 
@@ -118,14 +121,40 @@ class TestTransition:
         assert obj.status == "paid"
 
     @pytest.mark.asyncio(loop_scope="session")
+    async def test_transition_with_custom_state_field(self, order_fsm: StateMachine):
+        obj = FakeModel(status="closed", phase="pending")
+        await order_fsm.transition(obj, to_state="paid", state_field="phase")
+
+        assert obj.status == "closed"
+        assert obj.phase == "paid"
+        assert obj._saved_fields == ["phase"]
+
+    @pytest.mark.asyncio(loop_scope="session")
     async def test_invalid_transition_raises_transition_error(self, order_fsm: StateMachine):
         obj = FakeModel(status="completed")
-        with pytest.raises(TransitionError) as exc_info:
-            await order_fsm.transition(obj, to_state="pending")
+        logs: list[dict[str, object]] = []
 
-        assert exc_info.value.code == Code.HR_INVALID_TRANSITION
+        def log_fn(message: str, *, data: dict[str, object]) -> None:
+            logs.append({"message": message, "data": data})
+
+        with pytest.raises(TransitionError) as exc_info:
+            await order_fsm.transition(obj, to_state="pending", log_fn=log_fn)
+
+        assert exc_info.value.code == Code.STATE_TRANSITION_INVALID
         assert "completed" in str(exc_info.value)
         assert "pending" in str(exc_info.value)
+        assert obj.status == "completed"
+        assert obj._save_calls == 0
+        assert logs == []
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_invalid_transition_uses_custom_error_code(self):
+        fsm = StateMachine(transitions={"closed": []}, error_code="4999")
+
+        with pytest.raises(TransitionError) as exc_info:
+            await fsm.transition(FakeModel(status="closed"), to_state="pending")
+
+        assert exc_info.value.code == "4999"
 
 
 class TestTransitionErrorIsBizError:

@@ -81,17 +81,17 @@ CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"], "max_content_width": 
 @click.option("--cn-name", default=None, help="模块中文名（用于 i18n）")
 @click.option("--models", "models_spec", default=None, help="要生成 CRUD 的模型，逗号分隔；支持序号、类名、all")
 @click.option("-y", "--yes", "assume_yes", is_flag=True, help="不进入交互，使用全模型与推荐默认配置")
-@click.option("--contains", "contains_specs", multiple=True, help="后端模糊查询字段；普通 CharField/TextField 优先放这里，例: Employee:name,code")
-@click.option("--exact", "exact_specs", multiple=True, help="后端精确查询字段；适合外键 *_id、布尔、枚举字段/枚举类、唯一字段或字典值等，例: Employee:status_type,tenant_id")
-@click.option("--list-fields", "list_field_specs", multiple=True, help="前端列表字段，例: Employee:name,tenant_id,status_type")
-@click.option("--search-fields", "search_field_specs", multiple=True, help="前端搜索字段，例: Employee:name,status_type")
-@click.option("--list-order", "list_order_specs", multiple=True, help="后端列表默认排序，例: Employee:-created_at,id")
-@click.option("--enable-routes", "enable_route_specs", multiple=True, help="启用标准路由，例: Employee:list,get,create")
-@click.option("--exclude-fields", "exclude_field_specs", multiple=True, help="to_dict 排除字段，例: Employee:secret")
-@click.option("--soft-delete", "soft_delete_specs", multiple=True, help="启用软删除的模型，例: Employee 或 all")
-@click.option("--tree", "tree_specs", multiple=True, help="生成 tree 端点的模型，例: Department 或 all")
+@click.option("--contains", "contains_specs", multiple=True, help="后端模糊查询字段；普通 CharField/TextField 优先放这里，例: Product:name,code")
+@click.option("--exact", "exact_specs", multiple=True, help="后端精确查询字段；适合外键 *_id、布尔、枚举字段/枚举类、唯一字段或字典值等，例: Product:status_type,warehouse_id")
+@click.option("--list-fields", "list_field_specs", multiple=True, help="前端列表字段，例: Product:name,warehouse_id,status_type")
+@click.option("--search-fields", "search_field_specs", multiple=True, help="前端搜索字段，例: Product:name,status_type")
+@click.option("--list-order", "list_order_specs", multiple=True, help="后端列表默认排序，例: Product:-created_at,id")
+@click.option("--enable-routes", "enable_route_specs", multiple=True, help="启用标准路由，例: Product:list,get,create")
+@click.option("--exclude-fields", "exclude_field_specs", multiple=True, help="to_dict 排除字段，例: Product:secret")
+@click.option("--soft-delete", "soft_delete_specs", multiple=True, help="启用软删除的模型，例: Product 或 all")
+@click.option("--tree", "tree_specs", multiple=True, help="生成 tree 端点的模型，例: Category 或 all")
 @click.option("--button-auth", is_flag=True, help="为 create/edit/delete 生成按钮权限与菜单按钮声明")
-@click.option("--data-scope", "data_scope_specs", multiple=True, help="列表行级权限字段，例: Employee:user_id,tenant_id")
+@click.option("--data-scope", "data_scope_specs", multiple=True, help="列表行级权限字段，例: Product:owner_id,warehouse_id")
 @click.option("--list-cache", "list_cache_specs", multiple=True, help="列表接口缓存 TTL 秒数，例: Dict:60")
 @click.option("--rate-limit", "rate_limit_specs", multiple=True, help="输出 guard 限流配置提示，例: LoginLog:30/60")
 @click.option("--force", is_flag=True, help="强制覆盖已存在的文件")
@@ -123,10 +123,10 @@ def gen_all(
 
     示例:
 
-      uv run python -m app.cli crud hr --cn-name 人事 --yes
-      uv run python -m app.cli crud hr --models Employee --contains Employee:name \
-        --exact Employee:status_type --list-fields Employee:name,status_type \
-        --data-scope Employee:user_id,tenant_id --button-auth
+      uv run python -m app.cli crud inventory --cn-name 库存 --yes
+      uv run python -m app.cli crud inventory --models Product --contains Product:name \
+        --exact Product:status_type --list-fields Product:name,status_type \
+        --data-scope Product:owner_id,warehouse_id --button-auth
     """
     module_dir = BUSINESS_DIR / module_name
     models_path = module_dir / "models.py"

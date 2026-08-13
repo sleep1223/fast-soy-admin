@@ -95,6 +95,7 @@
 | `2404` | `PHONE_NOT_REGISTERED` | 手机号未注册 |
 | `2405` | `OLD_PASSWORD_WRONG` | 修改密码时原密码错误 |
 | `2406` | `TARGET_USER_NOT_FOUND` | 操作目标用户不存在（如模拟登录） |
+| `2407` | `STATE_TRANSITION_INVALID` | 不允许的状态流转 |
 
 ### 25xx — 限流 / 安全
 
@@ -124,18 +125,7 @@
 
 > 业务模块约定：业务码统一从 `4000` 起（不得占用 `2xxx` 系统段），在 `app/core/code.py` 末尾追加本模块的码段（如 `41xx`、`42xx`），**不要**反复使用 `2400`。每个失败场景一个唯一码，便于前端精确弹窗与测试断言。
 
-### 40xx — Inventory 业务（业务模块码示例）
-
-| 码 | 常量 | 说明 |
-|---|---|---|
-| `4000` | `INVENTORY_WAREHOUSE_REQUIRED` | 超级管理员创建商品需指定仓库 |
-| `4001` | `INVENTORY_MANAGER_REQUIRED` | 仅仓库主管可创建商品 |
-| `4002` | `INVENTORY_CREATE_FORBIDDEN` | 无权限创建商品 |
-| `4003` | `INVENTORY_TAGS_EXCEED_LIMIT` | 商品标签数量超出上限 |
-| `4004` | `INVENTORY_PRODUCT_NOT_IN_WAREHOUSE` | 该商品不在当前主管仓库中 |
-| `4005` | `INVENTORY_PRODUCT_BIND_REQUIRED` | 当前用户未关联商品信息 |
-| `4006` | `INVENTORY_MANAGER_ONLY` | 仅仓库主管可执行此操作 |
-| `4007` | `INVENTORY_INVALID_TRANSITION` | 不允许的状态流转 |
+`main` 不预置任何具体业务模块的 `4xxx` 常量。业务模块应为自己的失败场景分配唯一码；需要让状态机返回业务专属码时，通过 `StateMachine(..., error_code=Code.<MODULE>_INVALID_TRANSITION)` 显式配置。
 
 ## 抛出方式
 
@@ -145,7 +135,7 @@
 from app.utils import BizError, Code, Fail
 
 # 方式 A：抛异常（推荐，能在任意层穿透）
-raise BizError(code=Code.INVENTORY_INVALID_TRANSITION, msg="不允许从 'resigned' 转换为 'active'")
+raise BizError(code=Code.STATE_TRANSITION_INVALID, msg="不允许从 'draft' 转换为 'archived'")
 
 # 方式 B：返回 Fail（仅在 api 层用，更直白）
 return Fail(code=Code.OLD_PASSWORD_WRONG, msg="原密码错误")

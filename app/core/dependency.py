@@ -154,8 +154,8 @@ def require_buttons(*button_codes: str, require_all: bool = False):
 
     用法::
 
-        @router.post("/employees", dependencies=[require_buttons("B_HR_CREATE")])
-        async def create_emp(...): ...
+        @router.post("/products", dependencies=[require_buttons("B_INVENTORY_PRODUCT_CREATE")])
+        async def create_product(...): ...
 
         # 任意一个通过即可
         @router.patch("/x", dependencies=[require_buttons("B_A", "B_B")])

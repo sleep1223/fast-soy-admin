@@ -10,31 +10,31 @@
 
     from app.core.soft_delete import SoftDeleteManager, SoftDeleteMixin
 
-    class Department(BaseModel, AuditMixin, SoftDeleteMixin):
+    class Product(BaseModel, AuditMixin, SoftDeleteMixin):
         name = fields.CharField(max_length=100, unique=True)
         ...
 
         class Meta:
-            table = "biz_department"
+            table = "biz_inventory_product"
             # 必须在子类 Meta 中显式声明 — Tortoise 不会从抽象 mixin 的 Meta
             # 合并 manager（``ModelMeta.__new__`` 只读取子类自身的 Meta）
             manager = SoftDeleteManager()
 
     # 软删除
-    await department_controller.soft_remove(id=1)
+    await product_controller.soft_remove(id=1)
 
     # 查询（自动排除已删除）
-    await Department.filter(name="技术部")  # deleted_at IS NULL
+    await Product.filter(name="示例商品")  # deleted_at IS NULL
 
     # 查询已删除记录
-    await Department.all_objects.filter(deleted_at__isnull=False)
+    await Product.all_objects.filter(deleted_at__isnull=False)
 
 PostgreSQL 优化建议::
 
     对需要在软删除下保持唯一的字段，添加部分索引以替代普通 UNIQUE 约束：
 
-        CREATE UNIQUE INDEX biz_department_code_active_uq
-            ON biz_department(code)
+        CREATE UNIQUE INDEX biz_inventory_product_code_active_uq
+            ON biz_inventory_product(code)
             WHERE deleted_at IS NULL;
 
     这样同一 code 可以有多条已删除记录，但在未删除记录中仍保持唯一。

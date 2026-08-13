@@ -125,7 +125,20 @@
 
 > 业务模块约定：业务码统一从 `4000` 起（不得占用 `2xxx` 系统段），在 `app/core/code.py` 末尾追加本模块的码段（如 `41xx`、`42xx`），**不要**反复使用 `2400`。每个失败场景一个唯一码，便于前端精确弹窗与测试断言。
 
-`main` 不预置任何具体业务模块的 `4xxx` 常量。业务模块应为自己的失败场景分配唯一码；需要让状态机返回业务专属码时，通过 `StateMachine(..., error_code=Code.<MODULE>_INVALID_TRANSITION)` 显式配置。
+`main` 不预置任何具体业务模块的 `4xxx` 常量。`example` 分支为 HR 示例保留以下专属码：
+
+| 码 | 常量 | 说明 |
+|---|---|---|
+| `4000` | `HR_DEPARTMENT_REQUIRED` | 创建员工需要指定有效部门 |
+| `4001` | `HR_MANAGER_REQUIRED` | 仅部门主管可执行该操作 |
+| `4002` | `HR_CREATE_FORBIDDEN` | 无权限创建员工 |
+| `4003` | `HR_TAGS_EXCEED_LIMIT` | 员工标签数量超出上限 |
+| `4004` | `HR_EMPLOYEE_NOT_IN_DEPT` | 员工不在当前主管部门中 |
+| `4005` | `HR_USER_NOT_EMPLOYEE` | 当前用户未关联员工信息 |
+| `4006` | `HR_MANAGER_ONLY` | 仅部门主管可执行该操作 |
+| `4007` | `HR_INVALID_TRANSITION` | HR 员工状态流转无效 |
+
+HR 状态机通过 `StateMachine(..., error_code=Code.HR_INVALID_TRANSITION)` 显式使用 `4007`；其他业务模块应为自己的失败场景分配唯一码。
 
 ## 抛出方式
 

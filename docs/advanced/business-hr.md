@@ -82,6 +82,23 @@ HR 模块演示一套带 RBAC、数据范围、状态机和系统用户联动的
 - `GET /my/department`：查看同部门待转正/在职同事
 - `POST /my/avatar`：上传自己的头像
 
+## 状态机与错误码
+
+员工状态由通用 `StateMachine` 驱动，但 HR 模块显式配置自己的错误码：
+
+```python
+EMPLOYEE_FSM = StateMachine(
+    transitions={
+        "probation": ["active", "resigned"],
+        "active": ["resigned"],
+        "resigned": ["probation"],
+    },
+    error_code=Code.HR_INVALID_TRANSITION,
+)
+```
+
+因此，对当前状态执行不允许的动作会返回 `4007`（`HR_INVALID_TRANSITION`）。状态机在校验失败后立即抛错，不会修改员工状态、保存员工或新增 `EmployeeStatusLog`。
+
 ## 入职与返聘
 
 首次入职由 HR 主管或人事专员办理：

@@ -82,6 +82,23 @@ Personal APIs live in `app/business/hr/api/my.py`:
 - `GET /my/department`: view same-department `probation` and `active` colleagues
 - `POST /my/avatar`: upload own avatar
 
+## State Machine And Error Codes
+
+Employee status is driven by the generic `StateMachine`, while the HR module explicitly selects its own error code:
+
+```python
+EMPLOYEE_FSM = StateMachine(
+    transitions={
+        "probation": ["active", "resigned"],
+        "active": ["resigned"],
+        "resigned": ["probation"],
+    },
+    error_code=Code.HR_INVALID_TRANSITION,
+)
+```
+
+Calling an action that is invalid for the current state therefore returns `4007` (`HR_INVALID_TRANSITION`). Validation fails before the employee is changed or saved and before an `EmployeeStatusLog` is created.
+
 ## Onboarding And Rehire
 
 Onboarding is handled by HR managers or HR specialists:

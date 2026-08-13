@@ -287,6 +287,34 @@ class TestEmployeeCRUD:
         logs = logs_resp.json()["data"]
         assert [log["toStatus"] for log in logs][:3] == ["probation", "resigned", "active"]
 
+    async def test_invalid_regularize_returns_hr_code_without_side_effects(self, auth_client: AsyncClient, hr_data):
+        from app.business.hr.models import Employee, EmployeeStatus, EmployeeStatusLog
+
+        create_resp = await auth_client.post(
+            f"{PREFIX}/employees",
+            json={
+                "userName": "13800004444",
+                "name": "Invalid Transition Employee",
+                "departmentId": encode_id(hr_data["department"].id),
+            },
+        )
+        assert create_resp.status_code == 200
+        employee_id = create_resp.json()["data"]["employee_id"]
+        encoded_employee_id = encode_id(employee_id)
+
+        regularize_resp = await auth_client.post(f"{PREFIX}/employees/{encoded_employee_id}/regularize", json={})
+        assert regularize_resp.status_code == 200
+        assert regularize_resp.json()["code"] == Code.SUCCESS
+
+        log_count = await EmployeeStatusLog.filter(employee_id=employee_id).count()
+        invalid_resp = await auth_client.post(f"{PREFIX}/employees/{encoded_employee_id}/regularize", json={})
+
+        assert invalid_resp.status_code == 200
+        assert invalid_resp.json()["code"] == Code.HR_INVALID_TRANSITION
+        employee = await Employee.get(id=employee_id)
+        assert employee.status == EmployeeStatus.active
+        assert await EmployeeStatusLog.filter(employee_id=employee_id).count() == log_count
+
 
 # ===================== Manager Operations =====================
 

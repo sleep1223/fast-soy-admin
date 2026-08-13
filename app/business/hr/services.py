@@ -47,7 +47,8 @@ EMPLOYEE_FSM = StateMachine(
         "probation": ["active", "resigned"],
         "active": ["resigned"],
         "resigned": ["probation"],
-    }
+    },
+    error_code=Code.HR_INVALID_TRANSITION,
 )
 
 

@@ -125,7 +125,20 @@ Project-specific codes. The framework doesn't touch them; the frontend doesn't a
 
 > Module convention: business module codes must start at `4000` (do **not** occupy the `2xxx` system range). Append your module's range at the end of `app/core/code.py` (e.g. `41xx`, `42xx`). One unique code per failure scenario — never re-use `2400`.
 
-`main` does not define `4xxx` constants for any concrete business module. Assign one unique code per module failure. To make a state machine return a module-specific code, configure `StateMachine(..., error_code=Code.<MODULE>_INVALID_TRANSITION)` explicitly.
+`main` does not define `4xxx` constants for any concrete business module. The `example` branch keeps this HR-specific range:
+
+| Code | Constant | Meaning |
+|---|---|---|
+| `4000` | `HR_DEPARTMENT_REQUIRED` | A valid department is required when creating an employee |
+| `4001` | `HR_MANAGER_REQUIRED` | A department manager is required |
+| `4002` | `HR_CREATE_FORBIDDEN` | Employee creation is forbidden |
+| `4003` | `HR_TAGS_EXCEED_LIMIT` | Employee tag limit exceeded |
+| `4004` | `HR_EMPLOYEE_NOT_IN_DEPT` | Employee is outside the current manager's department |
+| `4005` | `HR_USER_NOT_EMPLOYEE` | Current user has no linked employee record |
+| `4006` | `HR_MANAGER_ONLY` | The operation is restricted to department managers |
+| `4007` | `HR_INVALID_TRANSITION` | Invalid HR employee status transition |
+
+The HR state machine explicitly selects `4007` with `StateMachine(..., error_code=Code.HR_INVALID_TRANSITION)`. Other business modules should allocate their own unique failure codes.
 
 ## Raising
 

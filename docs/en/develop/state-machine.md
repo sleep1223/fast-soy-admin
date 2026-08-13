@@ -145,4 +145,4 @@ async def test_draft_to_archived_blocked():
 ## See also
 
 - [Event bus](/en/develop/events) — emit events after transitions
-- [Concurrency control](/en/ops/concurrency) — state-machine and optimistic-lock responsibilities
+- [Concurrency control](/ops/concurrency) — state-machine and optimistic-lock responsibilities

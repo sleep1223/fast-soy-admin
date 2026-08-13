@@ -288,7 +288,7 @@ async def reconcile_menu_subtree(
 
     注意：
         - 一旦启用此函数，业务模块 init_data 就成为该子树的 single-source-of-truth，
-          从 Web 端手动新建的 HR 子菜单会在下次启动时被清掉。
+          从 Web 端手动新建的 Inventory 子菜单会在下次启动时被清掉。
         - 按钮对账是"子树内使用过的按钮"为基准，不会触及其他子树的按钮。
     """
     root = await Menu.filter(route_name=root_route).first()

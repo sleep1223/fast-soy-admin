@@ -89,7 +89,7 @@ See [Schema base](/en/develop/schema).
 
 | Symbol | Use |
 |---|---|
-| `Code.SUCCESS / Code.INVENTORY_INVALID_TRANSITION / ...` | [Response codes](/en/reference/codes) |
+| `Code.SUCCESS / Code.STATE_TRANSITION_INVALID / ...` | [Response codes](/en/reference/codes) |
 | `BizError(code, msg)` | raise from any layer; global handler returns `Fail` |
 | `SchemaValidationError(code, msg)` | raise inside Pydantic validators (bypasses Pydantic's own catch) |
 

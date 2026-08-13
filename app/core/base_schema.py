@@ -133,16 +133,16 @@ def make_optional(schema: type[BaseModel], name: str | None = None) -> type[Base
 
     用法::
 
-        class EmployeeCreate(SchemaBase):
+        class CustomerCreate(SchemaBase):
             name: str
             email: str
             tenant_id: int
 
-        EmployeeUpdate = make_optional(EmployeeCreate, "EmployeeUpdate")
+        CustomerUpdate = make_optional(CustomerCreate, "CustomerUpdate")
 
-    生成的 EmployeeUpdate 等价于::
+    生成的 CustomerUpdate 等价于::
 
-        class EmployeeUpdate(SchemaBase):
+        class CustomerUpdate(SchemaBase):
             name: str | None = None
             email: str | None = None
             tenant_id: int | None = None

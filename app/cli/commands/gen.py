@@ -59,9 +59,9 @@ CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"], "max_content_width": 
 @click.option("--enable-routes", "enable_route_specs", multiple=True, help="启用标准路由，例: User:list,get,create")
 @click.option("--exclude-fields", "exclude_field_specs", multiple=True, help="to_dict 排除字段，例: User:password,secret")
 @click.option("--soft-delete", "soft_delete_specs", multiple=True, help="启用软删除的模型，例: User 或 all")
-@click.option("--tree", "tree_specs", multiple=True, help="生成 tree 端点的模型，例: Department 或 all")
+@click.option("--tree", "tree_specs", multiple=True, help="生成 tree 端点的模型，例: Category 或 all")
 @click.option("--button-auth", is_flag=True, help="为 create/edit/delete 生成按钮权限与菜单按钮声明")
-@click.option("--data-scope", "data_scope_specs", multiple=True, help="列表行级权限字段，例: Employee:user_id,tenant_id")
+@click.option("--data-scope", "data_scope_specs", multiple=True, help="列表行级权限字段，例: Product:owner_id,warehouse_id")
 @click.option("--list-cache", "list_cache_specs", multiple=True, help="列表接口缓存 TTL 秒数，例: Dict:60")
 @click.option("--rate-limit", "rate_limit_specs", multiple=True, help="输出 guard 限流配置提示，例: LoginLog:30/60")
 @click.option("--force", is_flag=True, help="强制覆盖已存在的文件")
@@ -92,8 +92,8 @@ def gen(
 
     示例:
 
-      uv run python -m app.cli gen hr --yes --models Employee,Department
-      uv run python -m app.cli gen hr --models Employee --contains Employee:name --exact Employee:status_type --data-scope Employee:user_id,tenant_id
+      uv run python -m app.cli gen inventory --yes --models Product,Warehouse
+      uv run python -m app.cli gen inventory --models Product --contains Product:name --exact Product:status_type --data-scope Product:owner_id,warehouse_id
     """
     module_dir = BUSINESS_DIR / module_name
     models_path = module_dir / "models.py"

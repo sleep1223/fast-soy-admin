@@ -68,8 +68,8 @@ CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"], "max_content_width": 
 @click.option("--cn-name", default=None, help="模块中文名（用于 i18n）")
 @click.option("--models", "models_spec", default=None, help="要生成页面的模型，逗号分隔；支持序号、类名、all")
 @click.option("-y", "--yes", "assume_yes", is_flag=True, help="不进入交互，使用全模型与默认字段")
-@click.option("--list-fields", "list_field_specs", multiple=True, help="前端列表字段，例: Employee:name,tenant_id,status_type")
-@click.option("--search-fields", "search_field_specs", multiple=True, help="前端搜索字段，例: Employee:name,status_type")
+@click.option("--list-fields", "list_field_specs", multiple=True, help="前端列表字段，例: Product:name,warehouse_id,status_type")
+@click.option("--search-fields", "search_field_specs", multiple=True, help="前端搜索字段，例: Product:name,status_type")
 @click.option("--button-auth", is_flag=True, help="生成前端按钮权限显示控制（需后端已声明同名按钮权限）")
 @click.option("--force", is_flag=True, help="强制覆盖已存在的文件")
 @click.option("--dry-run", is_flag=True, help="只预览将创建/覆盖/追加的文件，不写入磁盘")
@@ -90,8 +90,8 @@ def gen_web(
 
     示例:
 
-      uv run python -m app.cli gen-web hr --cn-name 人事 --yes
-      uv run python -m app.cli gen-web hr --models Employee --list-fields Employee:name,status_type --search-fields Employee:name
+      uv run python -m app.cli gen-web inventory --cn-name 库存 --yes
+      uv run python -m app.cli gen-web inventory --models Product --list-fields Product:name,status_type --search-fields Product:name
     """
     module_dir = BUSINESS_DIR / module_name
     models_path = module_dir / "models.py"

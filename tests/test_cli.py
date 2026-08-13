@@ -197,18 +197,18 @@ from tortoise import fields
 from app.utils import BaseModel, StatusType
 
 
-class PayGrade(IntEnum):
-    p1 = 1
-    p2 = 2
+class PriceTier(IntEnum):
+    standard = 1
+    premium = 2
 
 
-class Employee(BaseModel):
-    """员工"""
+class Product(BaseModel):
+    """商品"""
 
     id = fields.IntField(primary_key=True)
-    name = fields.CharField(max_length=50, description="姓名")
+    name = fields.CharField(max_length=50, description="商品名称")
     status = fields.CharEnumField(StatusType, default=StatusType.enable, description="状态")
-    pay_grade = fields.IntEnumField(PayGrade, default=PayGrade.p1, description="职级")
+    price_tier = fields.IntEnumField(PriceTier, default=PriceTier.standard, description="价格等级")
 ''',
         encoding="utf-8",
     )
@@ -216,12 +216,12 @@ class Employee(BaseModel):
 
     fields = {field.name: field for field in model.schema_fields}
     assert fields["status"].enum_type == "StatusType"
-    assert fields["pay_grade"].enum_type == "PayGrade"
+    assert fields["price_tier"].enum_type == "PriceTier"
 
-    candidates = exact_field_candidates(model, {"Employee": ["name"]})
+    candidates = exact_field_candidates(model, {"Product": ["name"]})
     defaults = default_exact_field_names(model, candidates)
     assert "status" in defaults
-    assert "pay_grade" in defaults
+    assert "price_tier" in defaults
 
 
 def test_resolve_model_selection_supports_indexes_and_names(tmp_path: Path):
@@ -298,34 +298,34 @@ from tortoise import fields
 from app.utils import AuditMixin, BaseModel
 
 
-class Employee(BaseModel, AuditMixin):
-    """员工"""
+class Product(BaseModel, AuditMixin):
+    """商品"""
 
     id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=50, description="姓名")
-    user_id = fields.IntField(null=True, description="关联系统用户")
-    department_id = fields.IntField(description="所属部门")
+    owner_id = fields.IntField(null=True, description="负责人")
+    warehouse_id = fields.IntField(description="所属仓库")
 ''',
         encoding="utf-8",
     )
     [model] = parse_models(models_path)
 
     content = gen_api_manage(
-        "hr",
+        "inventory",
         [model],
-        {"Employee": ["name"]},
-        {"Employee": ["department_id"]},
-        backend_options=BackendFeatureOptions(data_scope={"Employee": DataScopeOption("user_id", "department_id")}),
+        {"Product": ["name"]},
+        {"Product": ["warehouse_id"]},
+        backend_options=BackendFeatureOptions(data_scope={"Product": DataScopeOption("owner_id", "warehouse_id")}),
     )
 
-    assert '@employee_crud.override("list")' in content
+    assert '@product_crud.override("list")' in content
     assert "scope = await get_current_data_scope(request.app.state.redis)" in content
-    assert 'user_id_field="user_id"' in content
-    assert 'scope_id_field="department_id"' in content
+    assert 'user_id_field="owner_id"' in content
+    assert 'scope_id_field="warehouse_id"' in content
     assert "return SuccessExtra" in content
 
-    data_scope = resolve_data_scope_map([model], ["Employee:created_by,department_id"])
-    assert data_scope["Employee"] == DataScopeOption("created_by", "department_id")
+    data_scope = resolve_data_scope_map([model], ["Product:created_by,warehouse_id"])
+    assert data_scope["Product"] == DataScopeOption("created_by", "warehouse_id")
 
 
 def test_gen_api_manage_list_cache_uses_explicit_cache_todo_instead_of_decorator(tmp_path: Path):
@@ -547,13 +547,13 @@ from tortoise import fields
 from app.utils import BaseModel
 
 
-class Employee(BaseModel):
-    """员工"""
+class Product(BaseModel):
+    """商品"""
 
     id = fields.IntField(primary_key=True)
-    name = fields.CharField(max_length=50, description="姓名")
-    department_id: int
-    department = fields.ForeignKeyField("models.Department", description="所属部门")
+    name = fields.CharField(max_length=50, description="商品名称")
+    warehouse_id: int
+    warehouse = fields.ForeignKeyField("models.Warehouse", description="所属仓库")
 ''',
         encoding="utf-8",
     )
@@ -561,19 +561,19 @@ class Employee(BaseModel):
 
     list_fields = resolve_field_map(
         [model],
-        ["Employee:name,department_id"],
+        ["Product:name,warehouse_id"],
         frontend_list_field_candidates,
         option_name="--list-fields",
     )
     search_fields = resolve_field_map(
         [model],
-        ["Employee:name,department_id"],
+        ["Product:name,warehouse_id"],
         frontend_search_field_candidates,
         option_name="--search-fields",
     )
 
-    assert list_fields["Employee"] == ["name", "department_id"]
-    assert search_fields["Employee"] == ["name", "department_id"]
+    assert list_fields["Product"] == ["name", "warehouse_id"]
+    assert search_fields["Product"] == ["name", "warehouse_id"]
 
 
 def test_frontend_list_fields_accept_non_default_fields_after_sixth(tmp_path: Path):
@@ -638,66 +638,66 @@ from tortoise import fields
 from app.utils import BaseModel, StatusType, StrEnum
 
 
-class EmployeeStatus(StrEnum):
-    active = "active"
+class ProductState(StrEnum):
+    available = "available"
 
 
-class Employee(BaseModel):
-    """员工"""
+class Product(BaseModel):
+    """商品"""
 
     id = fields.IntField(primary_key=True)
-    name = fields.CharField(max_length=50, description="姓名")
+    name = fields.CharField(max_length=50, description="商品名称")
     status = fields.CharEnumField(enum_type=StatusType, default=StatusType.enable, description="状态")
-    employee_status = fields.CharEnumField(enum_type=EmployeeStatus, default=EmployeeStatus.active, description="员工状态")
-    department_id: int
-    department = fields.ForeignKeyField("models.Department", description="所属部门")
+    product_state = fields.CharEnumField(enum_type=ProductState, default=ProductState.available, description="商品状态")
+    warehouse_id: int
+    warehouse = fields.ForeignKeyField("models.Warehouse", description="所属仓库")
 ''',
         encoding="utf-8",
     )
     [model] = parse_models(models_path)
 
     index = gen_view_index(
-        "hr",
+        "inventory",
         model,
-        ["name", "department_id", "employee_status"],
-        search_field_names=["name", "department_id", "employee_status"],
+        ["name", "warehouse_id", "product_state"],
+        search_field_names=["name", "warehouse_id", "product_state"],
         button_auth=True,
     )
-    search = gen_view_search("hr", model, ["name", "department_id", "employee_status"])
-    drawer = gen_view_drawer("hr", model)
+    search = gen_view_search("inventory", model, ["name", "warehouse_id", "product_state"])
+    drawer = gen_view_drawer("inventory", model)
 
     assert "import { useAuth } from '@/hooks/business/auth';" in index
     assert "const { hasAuth } = useAuth();" in index
-    assert "hasAuth('B_HR_EMPLOYEE_CREATE')" in index
-    assert "hasAuth('B_HR_EMPLOYEE_EDIT')" in index
-    assert "hasAuth('B_HR_EMPLOYEE_DELETE')" in index
-    assert "const departmentOptions = ref<SelectOptionItem[]>([]);" in index
-    assert "const employeeStatusOptions = ref<SelectOptionItem[]>([]);" in index
-    assert "const defaultSearchParams: Api.HrManage.EmployeeSearchParams = {" in index
+    assert "hasAuth('B_INVENTORY_PRODUCT_CREATE')" in index
+    assert "hasAuth('B_INVENTORY_PRODUCT_EDIT')" in index
+    assert "hasAuth('B_INVENTORY_PRODUCT_DELETE')" in index
+    assert "const warehouseOptions = ref<SelectOptionItem[]>([]);" in index
+    assert "const productStateOptions = ref<SelectOptionItem[]>([]);" in index
+    assert "const defaultSearchParams: Api.InventoryManage.ProductSearchParams = {" in index
     assert "  name: null," in index
-    assert "  departmentId: null," in index
-    assert "  employeeStatus: null," in index
-    assert ':department-options="departmentOptions"' in index
-    assert ':employee-status-options="employeeStatusOptions"' in index
+    assert "  warehouseId: null," in index
+    assert "  productState: null," in index
+    assert ':warehouse-options="warehouseOptions"' in index
+    assert ':product-state-options="productStateOptions"' in index
     assert '@reset="resetSearchParams"' in index
     assert "function resetSearchParams()" in index
     assert "getDataByPage(1);" in index
     assert '@add="handleAdd"' not in index
 
     assert "(e: 'reset'): void;" in search
-    assert "departmentOptions?: SelectOptionItem[];" in search
-    assert "employeeStatusOptions?: SelectOptionItem[];" in search
-    assert ':options="props.departmentOptions"' in search
-    assert ':options="props.employeeStatusOptions"' in search
+    assert "warehouseOptions?: SelectOptionItem[];" in search
+    assert "productStateOptions?: SelectOptionItem[];" in search
+    assert ':options="props.warehouseOptions"' in search
+    assert ':options="props.productStateOptions"' in search
     assert ':options="[]"' not in search
     assert "emit('reset');" in search
     assert "resetModel" not in search
     assert "jsonClone" not in search
 
-    assert "departmentOptions?: SelectOptionItem[];" in drawer
-    assert "employeeStatusOptions?: SelectOptionItem[];" in drawer
-    assert ':options="props.departmentOptions"' in drawer
-    assert ':options="props.employeeStatusOptions"' in drawer
+    assert "warehouseOptions?: SelectOptionItem[];" in drawer
+    assert "productStateOptions?: SelectOptionItem[];" in drawer
+    assert ':options="props.warehouseOptions"' in drawer
+    assert ':options="props.productStateOptions"' in drawer
     assert ':options="[]"' not in drawer
 
 
@@ -831,7 +831,7 @@ def test_collect_codegen_changes_keeps_non_codegen_paths(monkeypatch):
             return subprocess.CompletedProcess(
                 ["git", *args],
                 0,
-                stdout=(" M app/business/hr/schemas.py\n M README.md\n M web/src/router/elegant/routes.ts\n M web/src/typings/components.d.ts\n?? web/src/locales/langs/_generated/hr/zh-cn.ts\n"),
+                stdout=(" M app/business/inventory/schemas.py\n M README.md\n M web/src/router/elegant/routes.ts\n M web/src/typings/components.d.ts\n?? web/src/locales/langs/_generated/inventory/zh-cn.ts\n"),
                 stderr="",
             )
         raise AssertionError(args)
@@ -841,29 +841,29 @@ def test_collect_codegen_changes_keeps_non_codegen_paths(monkeypatch):
     selected, skipped = git_tools.collect_codegen_changes()
 
     assert [change.path for change in selected] == [
-        "app/business/hr/schemas.py",
+        "app/business/inventory/schemas.py",
         "web/src/router/elegant/routes.ts",
         "web/src/typings/components.d.ts",
-        "web/src/locales/langs/_generated/hr/zh-cn.ts",
+        "web/src/locales/langs/_generated/inventory/zh-cn.ts",
     ]
     assert [change.path for change in skipped] == ["README.md"]
 
 
 def test_backup_and_undo_codegen_changes_use_git(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(git_tools, "PROJECT_ROOT", tmp_path)
-    source = tmp_path / "app/business/hr/schemas.py"
+    source = tmp_path / "app/business/inventory/schemas.py"
     source.parent.mkdir(parents=True)
     source.write_text("generated schema", encoding="utf-8")
 
     changes = [
-        git_tools.GitChange(" M", "app/business/hr/schemas.py"),
-        git_tools.GitChange("??", "web/src/views/hr/employee/index.vue"),
+        git_tools.GitChange(" M", "app/business/inventory/schemas.py"),
+        git_tools.GitChange("??", "web/src/views/inventory/product/index.vue"),
     ]
 
     backup_path = git_tools.backup_codegen_changes(changes, tmp_path / "codegen_backups")
     manifest = json.loads((backup_path / "manifest.json").read_text(encoding="utf-8"))
-    assert manifest["changes"][0]["path"] == "app/business/hr/schemas.py"
-    assert (backup_path / "app/business/hr/schemas.py").read_text(encoding="utf-8") == "generated schema"
+    assert manifest["changes"][0]["path"] == "app/business/inventory/schemas.py"
+    assert (backup_path / "app/business/inventory/schemas.py").read_text(encoding="utf-8") == "generated schema"
 
     calls: list[list[str]] = []
 
@@ -876,6 +876,6 @@ def test_backup_and_undo_codegen_changes_use_git(monkeypatch, tmp_path: Path):
     git_tools.undo_codegen_changes(changes)
 
     assert calls == [
-        ["restore", "--staged", "--worktree", "--", "app/business/hr/schemas.py"],
-        ["clean", "-fd", "--", "web/src/views/hr/employee/index.vue"],
+        ["restore", "--staged", "--worktree", "--", "app/business/inventory/schemas.py"],
+        ["clean", "-fd", "--", "web/src/views/inventory/product/index.vue"],
     ]

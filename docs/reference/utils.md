@@ -89,7 +89,7 @@ from app.utils import (
 
 | 符号 | 用法 |
 |---|---|
-| `Code.SUCCESS / Code.INVENTORY_INVALID_TRANSITION / ...` | [响应码](./codes.md) |
+| `Code.SUCCESS / Code.STATE_TRANSITION_INVALID / ...` | [响应码](./codes.md) |
 | `BizError(code, msg)` | 任意层抛出，全局处理器转 `Fail` |
 | `SchemaValidationError(code, msg)` | Pydantic 校验器中抛出，绕过 Pydantic 自身的捕获 |
 

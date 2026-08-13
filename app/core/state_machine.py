@@ -7,19 +7,18 @@
 
     from app.core.state_machine import StateMachine
 
-    EMPLOYEE_FSM = StateMachine(
+    TICKET_FSM = StateMachine(
         transitions={
-            "pending":    ["onboarding"],
-            "onboarding": ["active"],
-            "active":     ["resigned"],
-            "resigned":   [],          # 终态
+            "open":        ["processing"],
+            "processing":  ["resolved"],
+            "resolved":    [],          # 终态
         }
     )
 
     # 在服务层
-    await EMPLOYEE_FSM.transition(
-        obj=employee,
-        to_state="active",
+    await TICKET_FSM.transition(
+        obj=ticket,
+        to_state="resolved",
         state_field="status",
         actor_id=current_user_id,
         log_fn=radar_log,
@@ -52,8 +51,14 @@ class StateMachine:
         }
     """
 
-    def __init__(self, transitions: dict[str, list[str]]) -> None:
+    def __init__(
+        self,
+        transitions: dict[str, list[str]],
+        *,
+        error_code: str = Code.STATE_TRANSITION_INVALID,
+    ) -> None:
         self.transitions = transitions
+        self.error_code = error_code
 
     def allowed(self, from_state: str, to_state: str) -> bool:
         """检查 from_state → to_state 是否合法。"""
@@ -96,7 +101,7 @@ class StateMachine:
 
         if not self.allowed(from_state, to_state):
             raise TransitionError(
-                code=Code.HR_INVALID_TRANSITION,
+                code=self.error_code,
                 msg=f"不允许从 '{from_state}' 转换为 '{to_state}'，允许的目标: {self.allowed_targets(from_state)}",
             )
 

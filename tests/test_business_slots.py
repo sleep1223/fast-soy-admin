@@ -7,15 +7,28 @@ from tortoise.expressions import Q
 import app.core.events as event_bus
 import app.core.policy as policy_registry
 from app.core.business import DataPolicy, EventSpec, PolicyContext
+from app.core.code import Code
 from app.core.ctx import CTX_BUTTON_CODES, CTX_ROLE_CODES, CTX_USER_ID
 from app.core.events import emit, on
 from app.core.outbox import dispatch_outbox_once, make_outbox_dispatch_task
 from app.core.policy import apply_data_policy, assert_object_policy
+from app.core.state_machine import StateMachine, TransitionError
 from app.core.tasks import BusinessTaskRunner
 
 
 class DemoPayload(BaseModel):
     item_id: int
+
+
+class _TerminalModel:
+    status = "closed"
+    pk = 1
+
+    def update_from_dict(self, _data: dict[str, object]) -> "_TerminalModel":
+        raise AssertionError("invalid transitions must not update the object")
+
+    async def save(self, *, update_fields: list[str] | None = None) -> None:
+        raise AssertionError("invalid transitions must not save the object")
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -79,6 +92,31 @@ async def test_object_policy_checker_denies_with_biz_error(monkeypatch):
             await assert_object_policy("demo.item.update", {"owner_id": 7})
     finally:
         CTX_USER_ID.reset(token)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_state_machine_invalid_transition_uses_generic_code_without_side_effects():
+    fsm = StateMachine({"closed": []})
+    logs: list[tuple[tuple[object, ...], dict[str, object]]] = []
+
+    def log_fn(*args: object, **kwargs: object) -> None:
+        logs.append((args, kwargs))
+
+    with pytest.raises(TransitionError) as exc_info:
+        await fsm.transition(_TerminalModel(), to_state="open", log_fn=log_fn)
+
+    assert exc_info.value.code == Code.STATE_TRANSITION_INVALID
+    assert logs == []
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_state_machine_accepts_custom_error_code():
+    fsm = StateMachine({"closed": []}, error_code="4999")
+
+    with pytest.raises(TransitionError) as exc_info:
+        await fsm.transition(_TerminalModel(), to_state="open")
+
+    assert exc_info.value.code == "4999"
 
 
 @pytest.mark.asyncio(loop_scope="session")

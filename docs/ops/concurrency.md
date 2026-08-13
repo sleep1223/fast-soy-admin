@@ -225,15 +225,15 @@ class Product(BaseModel):
 from app.core.exceptions import BizError
 from app.core.code import Code
 
-async def try_transition(emp: Product, to_state: str) -> None:
+async def try_transition(product: Product, to_state: str) -> None:
     # FSM 负责合法性
-    if not EMPLOYEE_FSM.allowed(emp.status, to_state):
-        raise TransitionError(code=Code.INVENTORY_INVALID_TRANSITION, msg=...)
+    if not PRODUCT_FSM.allowed(product.status, to_state):
+        raise TransitionError(code=Code.STATE_TRANSITION_INVALID, msg=...)
 
     # 乐观锁: 同时匹配 id + version 才真正 update
-    affected = await Product.filter(id=emp.id, version=emp.version).update(
+    affected = await Product.filter(id=product.id, version=product.version).update(
         status=to_state,
-        version=emp.version + 1,
+        version=product.version + 1,
     )
     if affected == 0:
         raise BizError(code=Code.CONFLICT, msg="记录已被其他人修改, 请刷新后重试")
@@ -595,7 +595,7 @@ await asyncio.gather(
 ```python
 async def import_products(redis: Redis, file_id: str, rows: list[ProductCreate]):
     # 1) 分布式锁: 同一个文件只允许一个 worker 在跑
-    lock = RedisLock(redis, name=f"hr:import:{file_id}", blocking_timeout=0, expire_timeout=300)
+    lock = RedisLock(redis, name=f"inventory:import:{file_id}", blocking_timeout=0, expire_timeout=300)
     if not await lock.acquire():
         return Fail(msg="该文件正在导入中")
     try:

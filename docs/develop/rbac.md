@@ -58,7 +58,7 @@ INVENTORY_MENU_CHILDREN = [
 await ensure_menu(menu_name="库存管理", route_name="inventory", ..., children=INVENTORY_MENU_CHILDREN)
 ```
 
-需要"删除已声明集合外的子菜单 / 按钮"时启用 `reconcile_menu_subtree(root_route="hr", ...)`，子树进入 IaC 模式。详见 [启动初始化与对账](./init-data.md)。
+需要"删除已声明集合外的子菜单 / 按钮"时启用 `reconcile_menu_subtree(root_route="inventory", ...)`，子树进入 IaC 模式。详见 [启动初始化与对账](./init-data.md)。
 
 ## 按钮命名约定
 
@@ -115,12 +115,12 @@ from app.core.data_scope import DataScopeType
 from app.system.services import ensure_role
 
 await ensure_role(
-    role_name="HR管理员",
+    role_name="库存管理员",
     role_code="R_INVENTORY_ADMIN",
     role_desc="库存专员",
     home_route="inventory_product",
     data_scope=DataScopeType.all,
-    menus=["home", "hr", "inventory_warehouse", "inventory_product", "inventory_tag"],
+    menus=["home", "inventory", "inventory_warehouse", "inventory_product", "inventory_tag"],
     buttons=["B_INVENTORY_WAREHOUSE_CREATE", "B_INVENTORY_WAREHOUSE_EDIT", ...],
     apis=[
         ("post", "/api/v1/business/inventory/products/search"),

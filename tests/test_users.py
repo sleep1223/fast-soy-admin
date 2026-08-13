@@ -10,15 +10,6 @@ from app.system.models import User
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
-async def get_optional_employee_count() -> int | None:
-    try:
-        from app.business.hr.models import Employee
-    except ModuleNotFoundError:
-        return None
-
-    return await Employee.all().count()
-
-
 class TestUserList:
     async def test_get_user_list(self, auth_client: AsyncClient):
         resp = await auth_client.post(
@@ -95,9 +86,7 @@ class TestUserCRUD:
         user = await User.get(id=decode_id(data["data"]["createdId"]))
         assert user.user_email is None
 
-    async def test_create_super_user_refreshes_role_cache_without_employee(self, auth_client: AsyncClient, app):
-        employee_count = await get_optional_employee_count()
-
+    async def test_create_super_user_refreshes_role_cache(self, auth_client: AsyncClient, app):
         resp = await auth_client.post(
             "/api/v1/system-manage/users",
             json={
@@ -113,8 +102,6 @@ class TestUserCRUD:
         assert data["code"] == "0000"
         user_id = decode_id(data["data"]["createdId"])
         assert await get_user_role_codes(app.state.redis, user_id) == [SUPER_ADMIN_ROLE]
-        if employee_count is not None:
-            assert await get_optional_employee_count() == employee_count
 
     async def test_create_user_no_role(self, auth_client: AsyncClient):
         resp = await auth_client.post(

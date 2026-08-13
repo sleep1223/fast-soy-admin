@@ -21,7 +21,7 @@
         scope_id=get_current_scope_id(),
         scope_id_field="tenant_id",
     )
-    total, employees = await controller.list(..., search=q & scope_q)
+    total, products = await controller.list(..., search=q & scope_q)
 """
 
 from __future__ import annotations

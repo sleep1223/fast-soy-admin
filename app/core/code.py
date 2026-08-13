@@ -75,6 +75,7 @@ class Code:
     PHONE_NOT_REGISTERED = "2404"  # 手机号未注册
     OLD_PASSWORD_WRONG = "2405"  # 修改密码时原密码错误
     TARGET_USER_NOT_FOUND = "2406"  # 操作目标用户不存在（模拟登录等）
+    STATE_TRANSITION_INVALID = "2407"  # 不允许的状态流转
 
     # 25xx — 限流/安全
     RATE_LIMITED = "2500"  # 请求过于频繁
@@ -97,13 +98,3 @@ class Code:
 
     # ==== 4000-9999 用户自定义业务码 ====
     # （框架不使用——供项目专属业务逻辑使用）
-
-    # 40xx — HR 业务模块
-    HR_DEPARTMENT_REQUIRED = "4000"  # 超级管理员创建员工需要指定部门
-    HR_MANAGER_REQUIRED = "4001"  # 仅部门主管可创建员工
-    HR_CREATE_FORBIDDEN = "4002"  # 无权限创建员工
-    HR_TAGS_EXCEED_LIMIT = "4003"  # 员工标签数量超出上限
-    HR_EMPLOYEE_NOT_IN_DEPT = "4004"  # 该员工不在当前主管部门中
-    HR_USER_NOT_EMPLOYEE = "4005"  # 当前用户未关联员工信息
-    HR_MANAGER_ONLY = "4006"  # 仅部门主管可执行此操作
-    HR_INVALID_TRANSITION = "4007"  # 不允许的状态流转

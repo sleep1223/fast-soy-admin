@@ -1,12 +1,12 @@
 # State Machine
 
-Lightweight FSM that does three things:
+The lightweight state machine has three responsibilities:
 
-1. Validates `from_state → to_state`
-2. Atomically updates the model field
-3. Calls a logger for audit
+1. Validate `from_state → to_state`
+2. Update the model state and any additional fields in the same save
+3. Call a logger with audit data
 
-No separate `TransitionLog` table — audit goes through `radar_log`.
+It does not create a separate `TransitionLog` table; use `radar_log` for audit records.
 
 Source: `app/core/state_machine.py`.
 
@@ -15,136 +15,134 @@ Source: `app/core/state_machine.py`.
 ```python
 from app.utils import StateMachine
 
-EMPLOYEE_FSM = StateMachine(
+PRODUCT_FSM = StateMachine(
     transitions={
-        "pending":    ["onboarding"],
-        "onboarding": ["active"],
-        "active":     ["resigned"],
-        "resigned":   [],          # terminal
+        "draft": ["active"],
+        "active": ["archived"],
+        "archived": [],
     }
 )
 ```
 
 `transitions` is an adjacency list: `{current_state: [allowed_targets]}`.
 
+Invalid transitions raise `TransitionError(code=Code.STATE_TRANSITION_INVALID, ...)` by default. A business module can opt into its own code through the keyword-only constructor argument:
+
+```python
+ORDER_FSM = StateMachine(
+    transitions={"pending": ["paid"], "paid": ["shipped"], "shipped": []},
+    error_code=Code.ORDER_INVALID_TRANSITION,
+)
+```
+
+The business module must first add `ORDER_INVALID_TRANSITION` to the project-defined range in `app/core/code.py`; see [Response codes](/en/reference/codes).
+
 ## Transition
 
 ```python
-from app.utils import radar_log, get_current_user_id
+from app.utils import Success, emit, get_current_user_id, radar_log
 
-async def transition_product(product_id: int, to_state: str):
-    emp = await product_controller.get(id=product_id)
-    await EMPLOYEE_FSM.transition(
-        obj=emp,
-        to_state=to_state,
+async def activate_product(product_id: int):
+    product = await product_controller.get(id=product_id)
+    await PRODUCT_FSM.transition(
+        obj=product,
+        to_state="active",
         state_field="status",
         actor_id=get_current_user_id(),
         log_fn=radar_log,
     )
-    await emit("product.status_changed", product_id=product_id, ...)
-    return Success(msg="state updated", data=await emp.to_dict())
+    await emit("product.status_changed", product_id=product_id, to_state="active")
+    return Success(msg="state updated", data=await product.to_dict())
 ```
 
 Inside `transition`:
 
-1. Reads `getattr(obj, state_field)`, handles `Enum.value`
-2. If `allowed(from_state, to_state)` is false → raise `TransitionError(code=Code.INVENTORY_INVALID_TRANSITION, msg="not allowed from 'X' to 'Y'; allowed targets: [...]")`
-3. `obj.update_from_dict({state_field: to_state, **extra_updates})` + `obj.save(update_fields=...)`
-4. `log_fn("state changed", data={"model", "id", "fromState", "toState", "actorId", "at"})`
+1. Read `getattr(obj, state_field)`, including `Enum.value`
+2. Validate `allowed(from_state, to_state)` and raise `TransitionError` with the configured code on failure
+3. Call `obj.update_from_dict(...)` and `obj.save(update_fields=...)`
+4. Call `log_fn("state changed", data={...})`
 
-## Full signature
+An invalid transition fails before update or logging, so it does not mutate the object or emit a success audit record.
+
+## Full signatures
 
 ```python
+StateMachine(
+    transitions: dict[str, list[str]],
+    *,
+    error_code: str = Code.STATE_TRANSITION_INVALID,
+)
+
 async def transition(
     self,
-    obj: Any,                                 # Tortoise model instance
-    to_state: str,                            # target state
+    obj: Any,
+    to_state: str,
     state_field: str = "status",
     actor_id: int | None = None,
     log_fn: Callable[..., None] | None = None,
-    extra_updates: dict[str, Any] | None = None,   # extra fields to write atomically
+    extra_updates: dict[str, Any] | None = None,
 ) -> None
 ```
 
-`extra_updates` use case: write `resigned_at` together with the state transition.
+Use `extra_updates` to persist related fields with the state:
 
 ```python
-await EMPLOYEE_FSM.transition(
-    obj=emp,
-    to_state="resigned",
-    state_field="status",
+await PRODUCT_FSM.transition(
+    obj=product,
+    to_state="archived",
     actor_id=get_current_user_id(),
     log_fn=radar_log,
-    extra_updates={"resigned_at": datetime.now(tz=timezone.utc)},
+    extra_updates={"archived_at": datetime.now(tz=timezone.utc)},
 )
 ```
 
 ## Inspect allowed targets
 
 ```python
-EMPLOYEE_FSM.allowed("pending", "active")    # → False
-EMPLOYEE_FSM.allowed_targets("pending")      # → ["onboarding"]
+PRODUCT_FSM.allowed("draft", "active")       # → True
+PRODUCT_FSM.allowed("draft", "archived")     # → False
+PRODUCT_FSM.allowed_targets("draft")           # → ["active"]
 ```
 
-The frontend can use this to show a "next action" button dynamically. Keep state transitions local to the owning business module.
+The frontend can use this information to show the next action, but the backend must still enforce the transition.
 
-## Failure → TransitionError
+## Error handling
 
-`TransitionError` extends `BizError`; the global handler turns it into `Fail(code=Code.INVENTORY_INVALID_TRANSITION, msg=...)`:
+`TransitionError` extends `BizError`, so the global handler converts it to `Fail(code, msg)`. Business services normally let it propagate.
 
-```python
-try:
-    await EMPLOYEE_FSM.transition(obj=emp, to_state="active", ...)
-except TransitionError as e:
-    return Fail(code=e.code, msg=e.msg)
-```
-
-> **Don't** catch it — let it propagate to the global handler; the frontend reacts to the code.
-
-## Per-module business codes
-
-Different modules use different code ranges:
-
-```python
-# end of app/core/code.py
-class Code:
-    ...
-    # 40xx Inventory
-    INVENTORY_INVALID_TRANSITION = "4007"
-
-    # 41xx Order
-    ORDER_INVALID_TRANSITION = "4107"
-```
-
-Then in business code wrap conditionally — or just reuse `Code.INVENTORY_INVALID_TRANSITION` if you don't care about the segment.
+- Without a module-specific code: `Code.STATE_TRANSITION_INVALID` (`2407`)
+- With `error_code`: the configured module-specific code
 
 ## Permission relationship
 
-The state machine only validates "legality"; it doesn't check "who's allowed to transition". **Authorize at the route layer**:
+The state machine validates transition legality; it does not authorize the actor. Authorize at the route layer:
 
 ```python
-@router.post("/products/{product_id}/transition", dependencies=[require_buttons("B_INVENTORY_PRODUCT_TRANSITION")])
-async def _(product_id: SqidPath, body: ProductTransition):
-    return await transition_product(product_id, body.to_state)
+@router.post(
+    "/products/{product_id}/transition",
+    dependencies=[require_buttons("B_INVENTORY_PRODUCT_TRANSITION")],
+)
+async def transition_product(product_id: SqidPath, body: ProductTransition):
+    return await product_service.transition(product_id, body.to_state)
 ```
 
 ## Tests
 
 ```python
-async def test_pending_to_onboarding_ok():
-    emp = await Product.create(status="pending", ...)
-    await EMPLOYEE_FSM.transition(obj=emp, to_state="onboarding")
-    assert emp.status == "onboarding"
+async def test_draft_to_active_ok():
+    product = await Product.create(status="draft", ...)
+    await PRODUCT_FSM.transition(obj=product, to_state="active")
+    assert product.status == "active"
 
 
-async def test_pending_to_active_blocked():
-    emp = await Product.create(status="pending", ...)
-    with pytest.raises(TransitionError) as ei:
-        await EMPLOYEE_FSM.transition(obj=emp, to_state="active")
-    assert ei.value.code == Code.INVENTORY_INVALID_TRANSITION
+async def test_draft_to_archived_blocked():
+    product = await Product.create(status="draft", ...)
+    with pytest.raises(TransitionError) as exc_info:
+        await PRODUCT_FSM.transition(obj=product, to_state="archived")
+    assert exc_info.value.code == Code.STATE_TRANSITION_INVALID
 ```
 
 ## See also
 
-- [State machine](state-machine.md)
-- [Event bus](/en/develop/events) — emit audit events after transitions
+- [Event bus](/en/develop/events) — emit events after transitions
+- [Concurrency control](/en/ops/concurrency) — state-machine and optimistic-lock responsibilities

@@ -2,7 +2,7 @@
 轻量级同进程事件总线 — 跨模块通信。
 
 业务模块之间不允许反向导入（system → 不知道 business），
-但有些场景需要跨模块联动（如删除用户时联动处理员工）。
+但有些场景需要跨模块联动（如商品创建后联动创建补货任务）。
 通过事件总线实现：发送方只管 ``emit``，接收方通过 ``@on`` 注册处理器。
 
 用法::
@@ -10,14 +10,14 @@
     # 注册事件处理器（通常在模块的 events.py 顶层）
     from app.core.events import on
 
-    @on("employee.created")
-    async def _notify_on_create(employee_id: int, **kwargs):
-        radar_log("员工创建事件", data={"employeeId": employee_id})
+    @on("product.created")
+    async def _notify_on_create(product_id: int, **kwargs):
+        radar_log("商品创建事件", data={"productId": product_id})
 
     # 触发事件（在服务层）
     from app.core.events import emit
 
-    await emit("employee.created", employee_id=new_emp.id)
+    await emit("product.created", product_id=new_product.id)
 
 注意：
     - 仅限进程内使用，不做跨进程/跨服务投递。
@@ -47,8 +47,8 @@ def on(event: str | EventSpec) -> Callable:
 
     处理器签名应接受 ``**kwargs``，以便事件触发方自由传参::
 
-        @on("employee.created")
-        async def handler(employee_id: int, **kwargs): ...
+        @on("product.created")
+        async def handler(product_id: int, **kwargs): ...
     """
 
     name = _event_name(event)

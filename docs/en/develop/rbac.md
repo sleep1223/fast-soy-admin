@@ -58,7 +58,7 @@ INVENTORY_MENU_CHILDREN = [
 await ensure_menu(menu_name="Inventory", route_name="inventory", ..., children=INVENTORY_MENU_CHILDREN)
 ```
 
-To "delete entries that are no longer in the seed", enable `reconcile_menu_subtree(root_route="hr", ...)` — the subtree enters IaC mode. See [Init data](/en/develop/init-data).
+To "delete entries that are no longer in the seed", enable `reconcile_menu_subtree(root_route="inventory", ...)` — the subtree enters IaC mode. See [Init data](/en/develop/init-data).
 
 ## Button naming convention
 
@@ -104,7 +104,7 @@ await ensure_role(
     role_desc="Inventory specialist",
     home_route="inventory_product",
     data_scope=DataScopeType.all,
-    menus=["home", "hr", "inventory_warehouse", "inventory_product", "inventory_tag"],
+    menus=["home", "inventory", "inventory_warehouse", "inventory_product", "inventory_tag"],
     buttons=["B_INVENTORY_WAREHOUSE_CREATE", "B_INVENTORY_WAREHOUSE_EDIT", ...],
     apis=[
         ("post", "/api/v1/business/inventory/products/search"),

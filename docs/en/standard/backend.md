@@ -18,7 +18,7 @@ Each item below is "to fix". Deviations require explicit justification in the PR
 # ✅
 return Success(data=await user.to_dict())
 return SuccessExtra(data={"records": records}, total=total, current=obj_in.current, size=obj_in.size)
-raise BizError(code=Code.INVENTORY_INVALID_TRANSITION, msg="invalid transition")
+raise BizError(code=Code.STATE_TRANSITION_INVALID, msg="invalid transition")
 
 # ❌
 return {"code": "0000", "data": {...}}

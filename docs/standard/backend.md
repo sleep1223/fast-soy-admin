@@ -18,7 +18,7 @@
 # ✅
 return Success(data=await user.to_dict())
 return SuccessExtra(data={"records": records}, total=total, current=obj_in.current, size=obj_in.size)
-raise BizError(code=Code.INVENTORY_INVALID_TRANSITION, msg="不允许的状态流转")
+raise BizError(code=Code.STATE_TRANSITION_INVALID, msg="不允许的状态流转")
 
 # ❌
 return {"code": "0000", "data": {...}}

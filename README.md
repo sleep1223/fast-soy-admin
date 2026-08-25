@@ -29,7 +29,7 @@
 
 - **后端** — FastAPI · Pydantic v2 · Tortoise ORM · Redis
 - **前端** — Vue3 · Vite8 · TypeScript · Naive UI · UnoCSS · Pinia · Alova · Elegant Router
-- **基础设施** — Docker Compose（Nginx + FastAPI + Redis）、多 worker 启动锁、fastapi-guard 限流、内置 Radar 监控面板
+- **基础设施** — Docker Compose（Nginx + FastAPI + Redis）、多 worker 启动锁、fastapi-guard 限流、内置 Radar 监控面板（默认关闭，按需开启）
 - **代码生成器** — `cli-init` 起骨架，编辑 `models.py`，`cli-crud` 一键产出前后端 CRUD
 
 ## 特性
@@ -43,7 +43,7 @@
 - **IaC 初始化对账** — 菜单、角色、API 启动时可声明式同步
 - **统一接口契约** — `{code, msg, data}`、camelCase、Sqid 对外 ID
 - **全栈类型检查** — basedpyright + vue-tsc + 静态 i18n 校验
-- **内置运维能力** — Radar 监控、Redis 缓存降级、限流与 IP 封禁
+- **内置运维能力** — Radar 监控（默认关闭）、Redis 缓存降级、限流与 IP 封禁
 - **Docker 部署** — Nginx + FastAPI + Redis 开箱即用
 
 ## 相关链接
@@ -98,6 +98,20 @@ cp .env.example .env  # 复制环境变量模板，按需修改 SECRET_KEY / DB_
 just db-init          # 首次建表 + 基础数据
 just run              # 并行启动后端(:9999) + 前端(:9527)，Ctrl+C 一起停
 ```
+
+### Radar 监控（默认关闭）
+
+出于敏感数据保护考虑，Radar 默认关闭。默认状态下不会挂载 `/__radar/api` 路由，不会启用请求、SQL 与异常采集，管理菜单中的 Radar 入口也处于禁用状态。
+
+确需排障时，本地开发在项目 `.env` 中显式开启；Docker 部署则修改构建时复制为 `.env` 的 `.env.docker`：
+
+```bash
+RADAR_ENABLED=true
+```
+
+修改后需要重启应用。启用后仅 `R_ADMIN` 与 `R_SUPER` 可以访问 Radar；匿名用户和普通用户无权访问，`/api/v1/auth/` 下的登录、注册等认证请求始终不会被采集。采集到的敏感字段会统一脱敏，但仍应仅在确有诊断需求时开启。
+
+关闭时将配置恢复为 `RADAR_ENABLED=false` 并重启。关闭 Radar 不会自动删除数据库中已有的历史记录；历史数据处置前应先备份，并按事故响应流程取得删除确认。完整配置、访问控制和数据处理规则见 [Radar 监控文档](https://sleep1223.github.io/fast-soy-admin-docs/ops/radar)。
 
 ## 常用命令
 

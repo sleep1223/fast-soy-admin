@@ -1,13 +1,10 @@
-from pathlib import Path
-
 from pydantic_settings import BaseSettings
 
 from app.core.config import APP_SETTINGS
 
 
 class RadarSettings(BaseSettings):
-    RADAR_ENABLED: bool = True
-    RADAR_DB_PATH: Path = APP_SETTINGS.BASE_DIR / "radar.sqlite3"
+    RADAR_ENABLED: bool = APP_SETTINGS.RADAR_ENABLED
     RADAR_RETENTION_HOURS: int = 24
     RADAR_MAX_BODY_SIZE: int = 65536
     RADAR_EXCLUDE_PATHS: list[str] = [
@@ -18,15 +15,13 @@ class RadarSettings(BaseSettings):
         "/openapi.json",
         "/redoc",
         "/doc",
+        "/api/v1/auth/",
         "/api/v1/monitor/",
         "/api/v1/route/constant-routes",
         "/api/v1/route/user-routes",
         "/api/v1/auth/user-info",
     ]
     RADAR_INCLUDE_PATHS: list[str] = [
-        "/api/v1/auth/login",
-        "/api/v1/auth/code-login",
-        "/api/v1/auth/register",
         "/__radar/api/_boom",
     ]
     RADAR_SLOW_QUERY_THRESHOLD_MS: float = 100.0

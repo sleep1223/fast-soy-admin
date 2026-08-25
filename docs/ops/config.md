@@ -26,7 +26,8 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES=720         # 12 小时
 JWT_REFRESH_TOKEN_EXPIRE_MINUTES=10080      # 7 天
 
 # ---- 监控 ----
-RADAR_ENABLED=true
+# 默认关闭；仅在确认需要且已了解采集范围后显式开启
+RADAR_ENABLED=false
 
 # ---- 限流（fastapi-guard, https://fastapi-guard.com/） ----
 GUARD_ENABLED=true
@@ -79,7 +80,8 @@ TRUSTED_HOSTS=["10.0.0.0/8"]
 | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `720` | access token 有效期（分钟） |
 | `JWT_REFRESH_TOKEN_EXPIRE_MINUTES` | `10080` | refresh token 有效期（分钟） |
 | `DATETIME_FORMAT` | `"%Y-%m-%d %H:%M:%S"` | `to_dict` 输出 `fmtCreatedAt` 等格式化字段时使用 |
-| `RADAR_ENABLED` | `true` | 启用内置 Radar 监控（请求/SQL/异常 dashboard，参考 fastapi-radar 实现） |
+| `RADAR_ENABLED` | `false` | 启用内置 Radar 监控；开启并重启后仅 `R_ADMIN` / `R_SUPER` 可访问，认证端点永不采集 |
+| `RADAR_RETENTION_HOURS` | `24` | 手工调用 Radar purge 接口时的默认保留时长；系统不会自动清理 |
 | `GUARD_ENABLED` | `true` | 启用 [fastapi-guard](https://fastapi-guard.com/) 限流 |
 | `GUARD_RATE_LIMIT` | `100` | 每窗口内允许请求数 |
 | `GUARD_RATE_LIMIT_WINDOW` | `60` | 限流窗口大小（秒） |
@@ -87,7 +89,7 @@ TRUSTED_HOSTS=["10.0.0.0/8"]
 | `GUARD_AUTO_BAN_DURATION` | `21600` | 自动封禁时长（秒，默认 6 小时） |
 | `PROXY_HEADERS_ENABLED` | `false` | 是否从 `X-Forwarded-*` 还原真实客户端 IP |
 | `TRUSTED_HOSTS` | `["127.0.0.1"]` | 信任的上游列表（IP / CIDR） |
-| `LOG_INFO_RETENTION` | `30 days` | 日志保留时间，支持 `seconds/minutes/hours/days/weeks/months/years` |
+| `LOG_INFO_RETENTION` | `30 days` | 仅控制 Loguru 文件日志保留时间，不清理 Radar 表；支持 `seconds/minutes/hours/days/weeks/months/years` |
 | `PROJECT_ROOT` | `app/` 父目录 | 自动推导 |
 | `BASE_DIR` | `PROJECT_ROOT.parent` | 自动推导 |
 | `LOGS_ROOT` | `BASE_DIR / "logs/"` | 启动时自动 mkdir |

@@ -26,7 +26,8 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES=720         # 12 hours
 JWT_REFRESH_TOKEN_EXPIRE_MINUTES=10080      # 7 days
 
 # ---- Monitoring ----
-RADAR_ENABLED=true
+# Disabled by default; opt in only after reviewing the collection scope
+RADAR_ENABLED=false
 
 # ---- Rate limit (fastapi-guard, https://fastapi-guard.com/) ----
 GUARD_ENABLED=true
@@ -79,7 +80,8 @@ TRUSTED_HOSTS=["10.0.0.0/8"]
 | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `720` | access token lifetime (minutes) |
 | `JWT_REFRESH_TOKEN_EXPIRE_MINUTES` | `10080` | refresh token lifetime (minutes) |
 | `DATETIME_FORMAT` | `"%Y-%m-%d %H:%M:%S"` | format for `to_dict`'s `fmtCreatedAt` etc. |
-| `RADAR_ENABLED` | `true` | enable in-house Radar monitoring (request/SQL/exception dashboard; implemented with reference to fastapi-radar) |
+| `RADAR_ENABLED` | `false` | enable in-house Radar monitoring; after restart only `R_ADMIN` / `R_SUPER` may access it, and auth endpoints are never collected |
+| `RADAR_RETENTION_HOURS` | `24` | default retention window for an explicit Radar purge call; no automatic cleanup runs |
 | `GUARD_ENABLED` | `true` | enable [fastapi-guard](https://fastapi-guard.com/) rate limiting |
 | `GUARD_RATE_LIMIT` | `100` | requests allowed per window |
 | `GUARD_RATE_LIMIT_WINDOW` | `60` | window size (seconds) |
@@ -87,7 +89,7 @@ TRUSTED_HOSTS=["10.0.0.0/8"]
 | `GUARD_AUTO_BAN_DURATION` | `21600` | auto-ban duration (seconds; default 6h) |
 | `PROXY_HEADERS_ENABLED` | `false` | reconcile `X-Forwarded-*` to true client IP |
 | `TRUSTED_HOSTS` | `["127.0.0.1"]` | trusted upstream list (IP / CIDR) |
-| `LOG_INFO_RETENTION` | `30 days` | log retention; supports `seconds/minutes/hours/days/weeks/months/years` |
+| `LOG_INFO_RETENTION` | `30 days` | controls Loguru file retention only, not Radar tables; supports `seconds/minutes/hours/days/weeks/months/years` |
 | `PROJECT_ROOT` | parent of `app/` | auto-derived |
 | `BASE_DIR` | `PROJECT_ROOT.parent` | auto-derived |
 | `LOGS_ROOT` | `BASE_DIR / "logs/"` | mkdir at startup |

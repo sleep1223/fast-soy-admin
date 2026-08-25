@@ -1,6 +1,7 @@
 import pytest
 
-from app.system.init_data import SYSTEM_INIT_DATA
+from app.core.base_model import StatusType
+from app.system.init_data import RADAR_API_REFS, SYSTEM_INIT_DATA, build_system_init_data
 from app.system.services import init_helper
 
 pytestmark = pytest.mark.asyncio
@@ -20,6 +21,23 @@ async def test_system_init_data_exposes_codegen_menu_to_admin():
         "icon": "mdi:code-json",
     }
     assert "manage_codegen" in admin_role["menus"]
+
+
+@pytest.mark.parametrize("radar_enabled", [False, True])
+async def test_radar_menu_and_admin_api_seed_follow_enabled_state(radar_enabled):
+    init_data = build_system_init_data(radar_enabled=radar_enabled)
+    manage_menu = next(menu for menu in init_data["menus"] if menu["route_name"] == "manage")
+    radar_menu = next(child for child in manage_menu["children"] if child["route_name"] == "manage_radar")
+    admin_role = next(role for role in init_data["roles"] if role["role_code"] == "R_ADMIN")
+    expected_status = StatusType.enable if radar_enabled else StatusType.disable
+
+    assert radar_menu["status_type"] == expected_status
+    assert all(child["status_type"] == expected_status for child in radar_menu["children"])
+    if radar_enabled:
+        assert set(RADAR_API_REFS).issubset(set(admin_role["apis"]))
+    else:
+        assert set(RADAR_API_REFS).isdisjoint(set(admin_role["apis"]))
+    assert ("get", "/__radar/api/_boom") not in admin_role["apis"]
 
 
 async def test_apply_init_data_applies_menus_roles_users_and_dictionaries(monkeypatch):

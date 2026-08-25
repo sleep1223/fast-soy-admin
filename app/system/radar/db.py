@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 from datetime import datetime, timedelta
 from typing import cast
@@ -13,39 +14,63 @@ from app.system.radar.config import RADAR_SETTINGS
 from app.system.radar.ctx import RadarRequestContext
 from app.system.radar.models import RadarQuery, RadarRequest, RadarUserLog
 from app.system.radar.query_capture import CTX_RADAR_WRITING
+from app.system.radar.redaction import REDACTED, redact_headers, redact_path, redact_query_string, redact_sql, redact_text, redact_value
+
+_REQUEST_LIST_EXCLUDED_FIELDS = ["request_headers", "request_body", "response_headers", "response_body", "error_traceback"]
+_SQL_PARAM_SUMMARY_RE = re.compile(r"^\[(?:\d+ parameters redacted|\d+ rows)\]$")
+
+
+def _redact_sql_params(params: object | None) -> str | None:
+    if params is None:
+        return None
+    if isinstance(params, str) and _SQL_PARAM_SUMMARY_RE.fullmatch(params):
+        return params
+    return REDACTED
+
+
+def _redact_record(record: dict) -> dict:
+    result = cast("dict", redact_value(record))
+    for key in ("path", "requestPath"):
+        if isinstance(result.get(key), str):
+            result[key] = redact_path(result[key])
+    for key in ("sql", "sqlText"):
+        if isinstance(result.get(key), str):
+            result[key] = redact_sql(result[key])
+    return result
 
 
 async def flush_request_data(ctx: RadarRequestContext) -> None:
     token = CTX_RADAR_WRITING.set(True)
     try:
         duration_ms = round((time.monotonic() - ctx.start_mono) * 1000, 3)
+        exception_info = redact_value(ctx.exception_info) if ctx.exception_info else None
 
         req_obj = await RadarRequest.create(
             x_request_id=ctx.x_request_id,
             method=ctx.method,
-            path=ctx.path,
+            path=redact_path(ctx.path) or "",
             client_ip=ctx.client_ip,
             client_port=ctx.client_port,
             user_id=ctx.user_id,
             user_name=ctx.user_name,
-            query_params=ctx.query_params,
-            request_headers=ctx.request_headers,
-            request_body=ctx.request_body,
+            query_params=redact_query_string(ctx.query_params),
+            request_headers=redact_headers(ctx.request_headers),
+            request_body=redact_text(ctx.request_body),
             response_status=ctx.response_status,
-            response_headers=ctx.response_headers,
-            response_body=ctx.response_body,
+            response_headers=redact_headers(ctx.response_headers),
+            response_body=redact_text(ctx.response_body),
             duration_ms=duration_ms,
-            error_type=ctx.exception_info.get("type") if ctx.exception_info else None,
-            error_message=ctx.exception_info.get("message") if ctx.exception_info else None,
-            error_traceback=ctx.exception_info.get("traceback") if ctx.exception_info else None,
+            error_type=exception_info.get("type") if exception_info else None,
+            error_message=exception_info.get("message") if exception_info else None,
+            error_traceback=exception_info.get("traceback") if exception_info else None,
         )
 
         if ctx.queries:
             await RadarQuery.bulk_create([
                 RadarQuery(
                     request=req_obj,
-                    sql_text=q["sql"],
-                    params=q.get("params"),
+                    sql_text=redact_sql(q["sql"]),
+                    params=_redact_sql_params(q.get("params")),
                     operation=q.get("operation"),
                     duration_ms=q["duration_ms"],
                     connection_name=q.get("connection_name"),
@@ -59,15 +84,16 @@ async def flush_request_data(ctx: RadarRequestContext) -> None:
                 RadarUserLog(
                     request=req_obj,
                     level=ul["level"],
-                    message=ul["message"],
-                    data=ul.get("data"),
+                    message=redact_text(ul["message"]),
+                    data=redact_text(ul.get("data")),
                     source=ul.get("source"),
                     offset_ms=ul.get("offset_ms"),
                 )
                 for ul in ctx.user_logs
             ])
-    except Exception:
-        logger.exception("Failed to flush radar data")
+    except Exception as exc:
+        # Loguru diagnose=True 会展开局部变量；这里只记录类型，避免 ctx 中的数据回流到文件日志。
+        logger.error("Failed to flush radar data ({})", type(exc).__name__)
     finally:
         CTX_RADAR_WRITING.reset(token)
 
@@ -107,11 +133,11 @@ async def query_requests(
     objs = await RadarRequest.filter(q).order_by("-id").offset(offset).limit(page_size)
     records = []
     for obj in objs:
-        d = await obj.to_dict()
+        d = await obj.to_dict(exclude_fields=_REQUEST_LIST_EXCLUDED_FIELDS)
         biz_code, biz_msg = _extract_business_code_and_msg(obj.response_body)
         d["businessCode"] = biz_code
         d["businessMsg"] = biz_msg
-        records.append(d)
+        records.append(_redact_record(d))
     return total, records
 
 
@@ -120,16 +146,20 @@ async def query_request_detail(x_request_id: str) -> dict | None:
     if not req:
         return None
 
-    result = await req.to_dict()
+    result = _redact_record(await req.to_dict())
     biz_code, biz_msg = _extract_business_code_and_msg(req.response_body)
     result["businessCode"] = biz_code
-    result["businessMsg"] = biz_msg
+    result["businessMsg"] = redact_text(biz_msg)
 
     query_objs = await RadarQuery.filter(request=req).order_by("start_offset_ms")
-    result["queries"] = [await q.to_dict() for q in query_objs]
+    result["queries"] = []
+    for query in query_objs:
+        query_data = _redact_record(await query.to_dict())
+        query_data["params"] = _redact_sql_params(query.params)
+        result["queries"].append(query_data)
 
     log_objs = await RadarUserLog.filter(request=req).order_by("offset_ms")
-    result["user_logs"] = [await ul.to_dict() for ul in log_objs]
+    result["user_logs"] = [_redact_record(await user_log.to_dict()) for user_log in log_objs]
 
     return result
 
@@ -149,9 +179,10 @@ async def query_all_queries(
     objs = await RadarQuery.filter(q).order_by("-duration_ms").offset(offset).limit(page_size).select_related("request")
     records = []
     for obj in objs:
-        d = await obj.to_dict()
+        d = _redact_record(await obj.to_dict())
+        d["params"] = _redact_sql_params(obj.params)
         d["xRequestId"] = obj.request.x_request_id if obj.request else None
-        d["requestPath"] = obj.request.path if obj.request else None
+        d["requestPath"] = redact_path(obj.request.path) if obj.request else None
         d["requestMethod"] = obj.request.method if obj.request else None
         records.append(d)
     return total, records
@@ -176,7 +207,7 @@ async def query_exceptions(
     objs = await RadarRequest.filter(q).order_by("-id").offset(offset).limit(page_size)
     records = []
     for obj in objs:
-        records.append(await obj.to_dict(include_fields=["x_request_id", "method", "path", "error_type", "error_message", "error_traceback", "duration_ms", "resolved", "created_at"]))
+        records.append(_redact_record(await obj.to_dict(include_fields=["x_request_id", "method", "path", "error_type", "error_message", "error_traceback", "duration_ms", "resolved", "created_at"])))
     return total, records
 
 

@@ -6,6 +6,7 @@ import time
 
 from app.core.log import log
 from app.system.radar.ctx import CTX_RADAR
+from app.system.radar.redaction import redact_text, redact_value
 
 
 def _format_endpoint(host: str | None, port: int | str | None) -> str | None:
@@ -40,15 +41,17 @@ def radar_log(message: str, *, level: str = "INFO", data: dict | None = None, lo
     """
     level = level.upper()
     radar_ctx = CTX_RADAR.get()
+    safe_message = redact_text(message) or ""
+    safe_data = redact_value(data) if data else None
 
     if log_to_file:
         log_func = _LOG_DISPATCH.get(level, log.info)
         endpoint = _format_endpoint(radar_ctx.client_ip, radar_ctx.client_port) if radar_ctx else None
         prefix = f"[{endpoint}] " if endpoint else ""
-        if data:
-            log_func(f"{prefix}{message} | {json.dumps(data, ensure_ascii=False, default=str)}")
+        if safe_data:
+            log_func(f"{prefix}{safe_message} | {json.dumps(safe_data, ensure_ascii=False, default=str)}")
         else:
-            log_func(f"{prefix}{message}")
+            log_func(f"{prefix}{safe_message}")
 
     if radar_ctx is None:
         return
@@ -63,8 +66,8 @@ def radar_log(message: str, *, level: str = "INFO", data: dict | None = None, lo
 
     radar_ctx.user_logs.append({
         "level": level,
-        "message": message,
-        "data": json.dumps(data, ensure_ascii=False, default=str) if data else None,
+        "message": safe_message,
+        "data": json.dumps(safe_data, ensure_ascii=False, default=str) if safe_data else None,
         "source": source,
         "offset_ms": round((time.monotonic() - radar_ctx.start_mono) * 1000, 3),
     })

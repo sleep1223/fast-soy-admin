@@ -1,15 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock @sa/axios before importing the module under test
-const mockRequest = vi.fn();
-vi.mock('@sa/axios', () => ({
-  createFlatRequest: () => mockRequest
-}));
+const { mockRequest, mockSharedRequest } = vi.hoisted(() => {
+  const requestMock = vi.fn();
+  return {
+    mockRequest: requestMock,
+    mockSharedRequest: vi.fn((config: Record<string, unknown>) => {
+      const { baseURL: _baseURL, ...requestConfig } = config;
+      return requestMock(requestConfig);
+    })
+  };
+});
+
+vi.mock('../../request', () => ({ request: mockSharedRequest }));
 
 // Mock import.meta.env
 vi.stubEnv('DEV', true);
 
-// Now import the functions (they will use the mocked createFlatRequest)
+// Import after mocking the shared authenticated request client.
 const {
   fetchRadarStats,
   fetchRadarDashboard,
@@ -24,7 +31,19 @@ const {
 describe('Radar API Service', () => {
   beforeEach(() => {
     mockRequest.mockReset();
+    mockSharedRequest.mockClear();
     mockRequest.mockResolvedValue({ data: null, error: null });
+  });
+
+  it('should reuse the authenticated request client with the Radar base URL', async () => {
+    await fetchRadarStats();
+
+    expect(mockSharedRequest).toHaveBeenCalledWith({
+      baseURL: '/__radar/api',
+      url: '/stats',
+      method: 'get',
+      params: undefined
+    });
   });
 
   afterEach(() => {

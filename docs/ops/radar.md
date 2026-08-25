@@ -9,19 +9,19 @@
 
 ## Radar（内置）
 
-捕获每次请求的：
+Radar 默认关闭。启用后，它会捕获符合采集规则的请求：
 
 - 请求路径、方法、状态码、耗时
-- 该请求执行的所有 SQL（含参数与耗时）
+- 该请求执行的所有 SQL（只保留参数数量 / 占位信息与耗时，不保存绑定参数值）
 - 该请求触发的异常
 - 业务侧主动埋的日志（`radar_log(...)`）
 
-数据写入 Radar 自带的轻量数据库（与主库分离），通过菜单"系统管理 / 性能监控"下五个页面查看：
+数据写入 `DB_URL` 对应数据库的 `radar_requests`、`radar_queries`、`radar_user_logs` 表，通过菜单"系统管理 / 性能监控"下五个页面查看：
 
 | 路径 | 内容 |
 |---|---|
 | `/manage/radar/overview` | 总览仪表板 |
-| `/manage/radar/requests` | 请求列表（含每条的完整时间线） |
+| `/manage/radar/requests` | 请求列表仅显示元数据；详情页显示脱敏后的完整时间线 |
 | `/manage/radar/queries` | SQL 查询列表（按耗时排序） |
 | `/manage/radar/exceptions` | 异常列表 |
 | `/manage/radar/monitor` | 系统指标（CPU / 内存 / DB 连接数） |
@@ -30,12 +30,61 @@
 
 ```bash
 # .env
-RADAR_ENABLED=true  # 默认 true
+RADAR_ENABLED=false  # 默认 false；需要时显式改为 true 并重启
 ```
 
-关闭后 `setup_radar` / `startup_radar` 都会跳过，前端菜单仍在但接口返回空数据。
+关闭后不会挂载 Radar 路由和采集中间件，也不会安装 SQL 捕获，Radar 菜单种子会被置为禁用。启用并重启后，路由、采集和管理员菜单一起恢复。
 
 > 本项目参考 fastapi-radar 实现。
+
+### 访问控制
+
+`/__radar/api/*` 使用与主 API 相同的 Bearer JWT 和 API RBAC：
+
+- `R_ADMIN` 默认获得 10 个请求、SQL、异常、统计、监控和清理接口；
+- `R_SUPER` 沿用超级管理员自动放行；
+- 普通用户无权访问；未登录请求会按现有认证失败响应返回；
+- 隐藏的 `/__radar/api/_boom` 不进入 API 资源表，只允许 `R_SUPER` 使用，并仍受 `APP_DEBUG` 限制。
+
+启用 Radar 时，`R_ADMIN` 的公开 API 种子固定为：
+
+| 方法 | 路径 |
+|---|---|
+| `GET` | `/__radar/api/requests` |
+| `GET` | `/__radar/api/requests/{x_request_id}` |
+| `GET` | `/__radar/api/queries` |
+| `GET` | `/__radar/api/exceptions` |
+| `PUT` | `/__radar/api/exceptions/{x_request_id}/resolve` |
+| `GET` | `/__radar/api/stats` |
+| `GET` | `/__radar/api/dashboard` |
+| `DELETE` | `/__radar/api/purge` |
+| `GET` | `/__radar/api/monitor/overview` |
+| `GET` | `/__radar/api/monitor/realtime` |
+
+前端 Radar 页面复用主请求客户端，因此会自动携带 Authorization，并沿用 access token 过期刷新与请求重放逻辑。
+
+### 敏感数据边界
+
+采集、`radar_log`、数据库写入和 API 返回都会使用统一的 `[REDACTED]` 脱敏器：
+
+- 递归处理 JSON、XML、URL 编码表单、multipart 表单、查询字符串、敏感路径参数以及请求 / 响应头；
+- 屏蔽 password、access / refresh token、Authorization、Cookie / Set-Cookie、API key、secret、CSRF、OTP 等常见字段，以及 Bearer / JWT 文本；
+- `/api/v1/auth/**` 永不采集请求或响应，环境变量中的 `RADAR_INCLUDE_PATHS` 也不能覆盖此规则；
+- SQL 结构仍可用于诊断，但字符串字面量与注释会脱敏；绑定参数值不落库，只保留参数数量或批量行数；
+- 异常堆栈不包含局部变量；请求列表不返回 headers、body 或 traceback，详情接口只返回脱敏后的内容；
+- 普通业务字段 `code` / `msg` 不自动隐藏，以保证筛选和仪表盘统计正常。不要把验证码或其他秘密放在通用 `code` / `msg` 字段中。
+
+读取旧记录时会再次脱敏，避免历史明文经 Radar API 返回；这不会改写数据库里已经存在的原始记录。
+
+### 升级后的历史数据处置
+
+本修复不会自动删除 Radar 历史数据或修改数据库结构。若旧版本曾对外运行并开启 Radar：
+
+1. 检查反向代理 / 网关中 `/__radar/api` 的历史访问记录，评估是否有人读取过数据；
+2. 先使可能暴露的 token 失效并重置密码、API key 等凭据；若怀疑签名密钥泄露或需要全局失效，再评估 Sqids 影响后轮换 `SECRET_KEY`；
+3. 先备份 `DB_URL` 对应数据库，再按事故处置流程决定是否清理 `radar_requests`。其关联的 SQL 与用户日志会级联删除，属于破坏性操作，必须另行取得明确授权。
+
+系统不会自动执行 Radar 保留期清理；`RADAR_RETENTION_HOURS` 只是手工调用 `DELETE /__radar/api/purge` 时的默认保留时长。该接口受 RBAC 保护，调用前仍应确认备份、范围和保留策略。
 
 ### radar_log — 业务埋点
 
@@ -55,6 +104,8 @@ radar_log("仅 radar，不落文件日志", log_to_file=False)
 | `level` | `"INFO"` | `DEBUG` / `INFO` / `WARNING` / `ERROR` / `CRITICAL` |
 | `data` | `None` | dict，自动 json 序列化 |
 | `log_to_file` | `True` | 同时输出到 loguru 文件日志 |
+
+只有请求已进入 Radar 采集上下文时才会追加 `radar_user_logs`；若请求未采集且 `log_to_file=False`，这条日志不会持久化。
 
 效果：
 

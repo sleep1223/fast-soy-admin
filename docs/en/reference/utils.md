@@ -132,7 +132,7 @@ radar_log("product state changed", data={"empId": emp.id, "to": "active"})
 radar_log("permission denied", level="ERROR", data={...})
 ```
 
-Writes to the in-house Radar monitoring; visible at `/manage/radar/*`. See [Monitoring (Radar)](/en/ops/radar).
+With the default `log_to_file=True`, content is sanitized and written to Loguru; when the current request is collected by Radar, it is also visible at `/manage/radar/*`. Authentication paths are never collected, and `log_to_file=False` leaves no persisted record. See [Monitoring (Radar)](/en/ops/radar).
 
 ### Security
 

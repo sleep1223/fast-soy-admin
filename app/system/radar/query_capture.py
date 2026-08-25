@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import contextvars
-import json
 import time
 from functools import wraps
 from typing import Any
 
 from app.system.radar.ctx import CTX_RADAR
+from app.system.radar.redaction import redact_sql
 
 # 递归防护：Radar 自身写入 DB 时设为 True，避免捕获自身产生的 SQL
 CTX_RADAR_WRITING: contextvars.ContextVar[bool] = contextvars.ContextVar("radar_writing", default=False)
@@ -67,12 +67,9 @@ def _discover_client_classes() -> list[type]:
 def _serialize_params(values: Any) -> str | None:
     if values is None:
         return None
-    try:
-        if isinstance(values, (list, tuple)) and len(values) > 100:
-            values = list(values[:100])
-        return json.dumps(values, ensure_ascii=False, default=str)
-    except Exception:
-        return str(values)[:2000]
+    if isinstance(values, (list, tuple, dict)):
+        return f"[{len(values)} parameters redacted]"
+    return "[REDACTED]"
 
 
 def _detect_operation(query: str) -> str:
@@ -98,7 +95,7 @@ def _make_patched(original: Any) -> Any:
         finally:
             duration_ms = (time.monotonic() - start) * 1000
             radar_ctx.queries.append({
-                "sql": query[:5000],
+                "sql": redact_sql(query)[:5000],
                 "params": _serialize_params(values),
                 "operation": _detect_operation(query),
                 "duration_ms": round(duration_ms, 3),
@@ -122,7 +119,7 @@ def _make_patched_many(original: Any) -> Any:
         finally:
             duration_ms = (time.monotonic() - start) * 1000
             radar_ctx.queries.append({
-                "sql": query[:5000],
+                "sql": redact_sql(query)[:5000],
                 "params": f"[{len(values_list or [])} rows]",
                 "operation": _detect_operation(query),
                 "duration_ms": round(duration_ms, 3),

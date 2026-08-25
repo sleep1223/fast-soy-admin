@@ -132,7 +132,7 @@ radar_log("商品状态变更", data={"empId": emp.id, "to": "active"})
 radar_log("权限拒绝", level="ERROR", data={...})
 ```
 
-写入内置 Radar 监控，可在 `/manage/radar/*` 五个页面查看。详见 [监控（Radar）](../ops/radar.md)。
+默认 `log_to_file=True` 时，内容会先脱敏并写入 Loguru；当前请求被 Radar 采集时，还会显示在 `/manage/radar/*`。认证路径永不采集，且 `log_to_file=False` 时不会持久化。详见 [监控（Radar）](../ops/radar.md)。
 
 ### 安全
 

@@ -213,7 +213,7 @@ radar_log("login success", data={"userName": user.user_name, "userId": user.id})
 radar_log("permission denied", level="ERROR", data={"method": method, "path": path})
 ```
 
-Writes into the in-house Radar monitoring DB (separate from main), visible on the `/manage/radar/*` pages. See [Monitoring (Radar)](/en/ops/radar).
+With the default `log_to_file=True`, `radar_log` writes sanitized content to Loguru. It is also appended to `radar_user_logs` and shown under `/manage/radar/*` only when the current request is collected by Radar. `/api/v1/auth/**` is never collected, so authentication instrumentation does not enter the Radar tables; with `log_to_file=False` it is not persisted at all. See [Monitoring (Radar)](/en/ops/radar).
 
 ## See also
 

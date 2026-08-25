@@ -225,7 +225,7 @@ radar_log("用户登录成功", data={"userName": user.user_name, "userId": user
 radar_log("权限拒绝", level="ERROR", data={"method": method, "path": path})
 ```
 
-写入内置 Radar 监控的数据库（独立连接），可在 `/manage/radar/*` 五个页面查看。详见 [监控（Radar）](../ops/radar.md)。
+`radar_log` 在默认 `log_to_file=True` 时把脱敏后的内容写入 Loguru；只有当前请求被 Radar 采集时，才会同时追加到 `radar_user_logs` 并显示在 `/manage/radar/*`。`/api/v1/auth/**` 永不采集，因此认证请求的埋点不会写入 Radar 表；若同时设置 `log_to_file=False`，则不会持久化。详见 [监控（Radar）](../ops/radar.md)。
 
 ## 相关
 

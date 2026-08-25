@@ -8,6 +8,7 @@ from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 from app.core.config import APP_SETTINGS
+from app.core.dependency import DependPermission, require_roles
 from app.system.radar import db
 from app.system.radar.config import RADAR_SETTINGS
 from app.system.services.monitor import collector
@@ -17,7 +18,7 @@ class ResolveBody(BaseModel):
     resolved: bool
 
 
-router = APIRouter(prefix="/__radar/api", tags=["Radar"])
+router = APIRouter(prefix="/__radar/api", tags=["Radar"], dependencies=[DependPermission, require_roles("R_ADMIN")])
 
 
 @router.get("/requests", summary="请求列表")
@@ -112,7 +113,7 @@ async def get_dashboard_stats(hours: int = Query(default=1, ge=1, le=720)):
 
 
 @router.delete("/purge", summary="清理过期数据")
-async def purge_data(retention_hours: int = Query(default=24, ge=1)):
+async def purge_data(retention_hours: int = Query(default=RADAR_SETTINGS.RADAR_RETENTION_HOURS, ge=1)):
     deleted = await db.purge_old_data(retention_hours=retention_hours)
     return {"code": "0000", "msg": "OK", "data": {"deleted_count": deleted}}
 

@@ -54,6 +54,7 @@ docker compose exec app uv run tortoise migrate # 若本次更新含模型变更
 | [`.env.docker`](https://github.com/sleep1223/fast-soy-admin/blob/main/.env.docker) | `SECRET_KEY` | 模板自带 | JWT 签名密钥，泄露=任意伪造 token；用 `openssl rand -hex 32` 重新生成 |
 | [`.env.docker`](https://github.com/sleep1223/fast-soy-admin/blob/main/.env.docker) | `CORS_ORIGINS` | `["*"]` | 生产改成具体域名白名单 |
 | [`.env.docker`](https://github.com/sleep1223/fast-soy-admin/blob/main/.env.docker) | `APP_DEBUG` | 已是 `false`，确认不要改回 `true` | 调试模式会泄露堆栈与内部细节 |
+| [`.env.docker`](https://github.com/sleep1223/fast-soy-admin/blob/main/.env.docker) | `RADAR_ENABLED` | 已是 `false` | 默认保持关闭；确需启用时，仅向 `R_ADMIN` / `R_SUPER` 开放并纳入敏感数据运维 |
 
 > 修改 PG 密码后若已经起过容器，需要 `docker compose down -v` 清掉 `postgres_data` 卷再重启——否则会沿用首次初始化时写入的旧密码。生产更稳的做法：用 `${PG_PASSWORD}` 等占位符 + 部署机的环境变量注入，避免明文入库。
 
@@ -309,9 +310,22 @@ curl -H "Authorization: Bearer <user_token>" http://your-host/api/v1/system/user
        return True
    ```
 
-4. **加测试 + 灰度**：先在 staging 用真实手机号验证一遍登录 / 注册 / 重置密码三条链路，再切生产。**生产环境一定要把 `radar_log` 里打印 `code` 的那一行删掉**，否则验证码会进入 Radar 监控数据库，等同于明文留底。
+4. **加测试 + 灰度**：先在 staging 用真实手机号验证一遍登录 / 注册 / 重置密码三条链路，再切生产。**生产环境一定要把 `radar_log` 里打印 `code` 的那一行删掉**。认证路径虽不会进入 Radar 请求库，但 `radar_log` 默认仍写 Loguru；普通业务 `code` / `msg` 也不会自动脱敏，验证码仍会明文留在文件日志中。
 
 5. **加风控**：建议把 `/auth/captcha`、`/auth/register`、`/auth/reset-password` 三个端点单独配 IP 限流（参考 `app/core` 里 `GUARD_*` 配置），防止短信轰炸。
+
+### 5. 受影响版本升级后的 Radar 处置
+
+Radar 默认关闭。升级后先确认 `.env` / `.env.docker` 中的 `RADAR_ENABLED`；只有确有诊断需求时才设为 `true` 并重启。启用后，匿名和普通用户访问 `/__radar/api/*` 应分别得到认证失败和权限不足，只有 `R_ADMIN` / `R_SUPER` 可用。
+
+如果旧版本曾在公网开启 Radar：
+
+1. 检查 Nginx、网关或 WAF 中 `/__radar/api` 的历史访问日志；
+2. 先使可能暴露的 token 失效并重置密码、API key 等凭据；若怀疑签名密钥泄露或需要全局失效，再评估 Sqids 影响后轮换 `SECRET_KEY`；
+3. 注意修复只会在 API 读取时再次脱敏，不会改写旧的数据库记录；
+4. Radar 表位于 `DB_URL` 对应数据库并随其正常备份 / 恢复；如需清理 `radar_requests` 及级联的 `radar_queries` / `radar_user_logs`，必须先备份、明确范围，并按破坏性操作流程另行取得确认。补丁不会自动清理数据或修改表结构。
+
+详见 [Radar 的敏感数据边界与历史数据处置](./radar.md#升级后的历史数据处置)。
 
 ### 上线前最终检查
 
@@ -327,6 +341,9 @@ curl -s https://your-host/login | grep -iE "soybean|123456"                     
 # 短信
 APP_DEBUG=false python -c "import asyncio; from app.system.services.captcha import send_captcha; ..."
 # 用真实手机号收一条短信确认
+
+# Radar（默认应为 false；若显式开启，再验证匿名 / 普通用户 / 管理员三类访问）
+grep '^RADAR_ENABLED=' .env .env.docker
 ```
 
-完成上述四项才视为生产就绪。建议把这份清单挂到 PR 模板或上线 checklist 里，避免以后新环境复发。
+完成上述五项才视为生产就绪。建议把这份清单挂到 PR 模板或上线 checklist 里，避免以后新环境复发。

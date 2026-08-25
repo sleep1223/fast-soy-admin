@@ -1,6 +1,9 @@
+from copy import deepcopy
+
+from app.core.config import APP_SETTINGS
 from app.core.constants import SUPER_ADMIN_ROLE
 from app.core.data_scope import DataScopeType
-from app.system.models import Button, Menu, Role
+from app.system.models import Button, Menu, Role, StatusType
 from app.system.services import apply_init_data
 from app.system.services.init_helper import _safe_update_or_create
 
@@ -19,6 +22,19 @@ def _crud_apis(resource: str, *, with_tree: bool = False) -> list[tuple[str, str
         apis.append(("get", f"{base}/tree"))
     return apis
 
+
+RADAR_API_REFS: list[tuple[str, str]] = [
+    ("get", "/__radar/api/requests"),
+    ("get", "/__radar/api/requests/{x_request_id}"),
+    ("get", "/__radar/api/queries"),
+    ("get", "/__radar/api/exceptions"),
+    ("put", "/__radar/api/exceptions/{x_request_id}/resolve"),
+    ("get", "/__radar/api/stats"),
+    ("get", "/__radar/api/dashboard"),
+    ("delete", "/__radar/api/purge"),
+    ("get", "/__radar/api/monitor/overview"),
+    ("get", "/__radar/api/monitor/realtime"),
+]
 
 SYSTEM_INIT_DATA = {
     "menus": [
@@ -299,6 +315,7 @@ SYSTEM_INIT_DATA = {
                     "order": 7,
                     "icon": "mdi:radar",
                     "menu_type": "1",
+                    "status_type": StatusType.disable,
                     "children": [
                         {
                             "menu_name": "仪表板",
@@ -307,6 +324,7 @@ SYSTEM_INIT_DATA = {
                             "component": "view.manage_radar_overview",
                             "order": 1,
                             "icon": "mdi:chart-box-outline",
+                            "status_type": StatusType.disable,
                         },
                         {
                             "menu_name": "请求列表",
@@ -315,6 +333,7 @@ SYSTEM_INIT_DATA = {
                             "component": "view.manage_radar_requests",
                             "order": 2,
                             "icon": "mdi:swap-horizontal",
+                            "status_type": StatusType.disable,
                         },
                         {
                             "menu_name": "SQL查询",
@@ -323,6 +342,7 @@ SYSTEM_INIT_DATA = {
                             "component": "view.manage_radar_queries",
                             "order": 3,
                             "icon": "mdi:database-search",
+                            "status_type": StatusType.disable,
                         },
                         {
                             "menu_name": "异常列表",
@@ -331,6 +351,7 @@ SYSTEM_INIT_DATA = {
                             "component": "view.manage_radar_exceptions",
                             "order": 4,
                             "icon": "mdi:bug-outline",
+                            "status_type": StatusType.disable,
                         },
                         {
                             "menu_name": "系统监控",
@@ -339,6 +360,7 @@ SYSTEM_INIT_DATA = {
                             "component": "view.manage_radar_monitor",
                             "order": 5,
                             "icon": "mdi:monitor-dashboard",
+                            "status_type": StatusType.disable,
                         },
                     ],
                 },
@@ -607,8 +629,28 @@ SYSTEM_INIT_DATA = {
 }
 
 
+def build_system_init_data(*, radar_enabled: bool | None = None) -> dict:
+    """按启动时的 Radar 开关生成菜单和角色种子，避免导入时配置快照漂移。"""
+    enabled = APP_SETTINGS.RADAR_ENABLED if radar_enabled is None else radar_enabled
+    init_data = deepcopy(SYSTEM_INIT_DATA)
+
+    manage_menu = next(menu for menu in init_data["menus"] if menu["route_name"] == "manage")
+    radar_menu = next(child for child in manage_menu["children"] if child["route_name"] == "manage_radar")
+    radar_status = StatusType.enable if enabled else StatusType.disable
+    radar_menu["status_type"] = radar_status
+    for child in radar_menu["children"]:
+        child["status_type"] = radar_status
+
+    admin_role = next(role for role in init_data["roles"] if role["role_code"] == "R_ADMIN")
+    if enabled:
+        admin_role["apis"].extend(RADAR_API_REFS)
+
+    return init_data
+
+
 async def init_menus() -> None:
-    await apply_init_data({"menus": SYSTEM_INIT_DATA["menus"]})
+    init_data = build_system_init_data()
+    await apply_init_data({"menus": init_data["menus"]})
 
 
 async def _ensure_super_role() -> None:
@@ -634,9 +676,10 @@ async def _ensure_super_role() -> None:
 
 
 async def init_users() -> None:
+    init_data = build_system_init_data()
     await _ensure_super_role()
     await apply_init_data({
-        "roles": SYSTEM_INIT_DATA["roles"],
-        "users": SYSTEM_INIT_DATA["users"],
-        "dictionaries": SYSTEM_INIT_DATA["dictionaries"],
+        "roles": init_data["roles"],
+        "users": init_data["users"],
+        "dictionaries": init_data["dictionaries"],
     })

@@ -1,5 +1,5 @@
-import type { AxiosResponse } from 'axios';
-import { createFlatRequest } from '@sa/axios';
+import type { CustomAxiosRequestConfig } from '@sa/axios';
+import { request } from '../request';
 
 /** Remove null, undefined, and empty string values from params to avoid FastAPI 422 errors */
 function cleanParams<T extends Record<string, any>>(params?: T): Partial<T> | undefined {
@@ -13,30 +13,10 @@ function cleanParams<T extends Record<string, any>>(params?: T): Partial<T> | un
   return Object.keys(cleaned).length > 0 ? (cleaned as Partial<T>) : undefined;
 }
 
-/** radar uses a separate base URL since it's not under /api/v1; dev requests go through Vite proxy at /__radar */
-const radarRequest = createFlatRequest(
-  {
-    baseURL: '/__radar/api'
-  },
-  {
-    transform(response: AxiosResponse<App.Service.Response<any>>) {
-      return response.data.data;
-    },
-    async onRequest(config) {
-      return config;
-    },
-    isBackendSuccess(response: AxiosResponse<App.Service.Response<any>>) {
-      return response.data.code === '0000';
-    },
-    async onBackendFail(response: AxiosResponse<App.Service.Response<any>>) {
-      const message = response.data?.msg || 'Error';
-      window.$message?.error(message);
-    },
-    onError(error) {
-      window.$message?.error(error.message);
-    }
-  }
-);
+/** Radar is outside /api/v1 but must reuse the authenticated client and its refresh/retry flow. */
+function radarRequest<T>(config: CustomAxiosRequestConfig) {
+  return request<T>({ baseURL: '/__radar/api', ...config });
+}
 
 /** get radar stats overview */
 export function fetchRadarStats(hours?: number) {

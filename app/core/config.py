@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     CORS_ALLOW_HEADERS: list[str] = Field(default_factory=lambda: ["*"])
 
     APP_DEBUG: bool = False
-    RADAR_ENABLED: bool = True
+    RADAR_ENABLED: bool = False
 
     PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
     BASE_DIR: Path = PROJECT_ROOT.parent

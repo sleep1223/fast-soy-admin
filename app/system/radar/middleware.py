@@ -13,18 +13,18 @@ from app.system.radar.config import RADAR_SETTINGS
 from app.system.radar.ctx import CTX_RADAR, RadarRequestContext
 from app.system.radar.db import flush_request_data
 from app.system.radar.exceptions import format_exception_pretty
+from app.system.radar.redaction import redact_headers, redact_path, redact_query_string, redact_text, redact_value
+
+_AUTH_PATH_PREFIX = "/api/v1/auth"
 
 
 def _serialize_headers(headers: list[tuple[bytes, bytes]]) -> dict[str, str]:
     result: dict[str, str] = {}
-    sensitive_keys = {"authorization", "cookie", "x-api-key", "x-auth-token", "x-csrf-token"}
     for key_bytes, val_bytes in headers:
         key = key_bytes.decode("latin-1", errors="replace").lower()
         val = val_bytes.decode("latin-1", errors="replace")
-        if key in sensitive_keys:
-            val = "[REDACTED]"
         result[key] = val
-    return result
+    return redact_headers(result) or {}
 
 
 def _truncate_body(body: str | None, max_size: int) -> str | None:
@@ -45,6 +45,11 @@ class RadarMiddleware:
             return
 
         path = scope.get("path", "")
+
+        # 认证端点永不采集，且不能被环境变量中的 include 列表重新启用。
+        if path == _AUTH_PATH_PREFIX or path.startswith(f"{_AUTH_PATH_PREFIX}/"):
+            await self.app(scope, receive, send)
+            return
 
         is_included = any(path.startswith(inc) for inc in RADAR_SETTINGS.RADAR_INCLUDE_PATHS)
         is_excluded = any(path.startswith(exc) for exc in RADAR_SETTINGS.RADAR_EXCLUDE_PATHS)
@@ -93,10 +98,10 @@ class RadarMiddleware:
             x_request_id=x_request_id,
             start_mono=time.monotonic(),
             method=scope.get("method", ""),
-            path=scope.get("path", ""),
+            path=redact_path(scope.get("path", "")) or "",
             client_ip=client_ip,
             client_port=client_port,
-            query_params=scope.get("query_string", b"").decode("latin-1") or None,
+            query_params=redact_query_string(scope.get("query_string", b"").decode("latin-1") or None),
             request_headers=_serialize_headers(scope.get("headers", [])),
         )
 
@@ -132,8 +137,8 @@ class RadarMiddleware:
             exc_type, exc_value, exc_tb = sys.exc_info()
             radar_ctx.exception_info = {
                 "type": exc_type.__name__ if exc_type else "Unknown",
-                "message": str(exc_value),
-                "traceback": format_exception_pretty(exc_type, exc_value, exc_tb),
+                "message": redact_text(str(exc_value)),
+                "traceback": redact_text(format_exception_pretty(exc_type, exc_value, exc_tb)),
             }
             raise
         finally:
@@ -141,11 +146,15 @@ class RadarMiddleware:
             should_flush = not flush_only_if_logged or bool(radar_ctx.user_logs)
 
             if should_flush:
+                radar_ctx.path = redact_path(scope.get("path", ""), path_params=scope.get("path_params")) or ""
+                if radar_ctx.exception_info:
+                    radar_ctx.exception_info = redact_value(radar_ctx.exception_info)
+
                 # 整理请求体
                 if body_chunks:
                     raw_body = b"".join(body_chunks)
                     try:
-                        radar_ctx.request_body = _truncate_body(raw_body.decode("utf-8", errors="replace"), RADAR_SETTINGS.RADAR_MAX_BODY_SIZE)
+                        radar_ctx.request_body = _truncate_body(redact_text(raw_body.decode("utf-8", errors="replace")), RADAR_SETTINGS.RADAR_MAX_BODY_SIZE)
                     except Exception:
                         radar_ctx.request_body = f"[binary {len(raw_body)} bytes]"
 
@@ -156,7 +165,7 @@ class RadarMiddleware:
                 if RADAR_SETTINGS.RADAR_CAPTURE_RESPONSE_BODY and response_body_chunks:
                     raw_resp = b"".join(response_body_chunks)
                     try:
-                        radar_ctx.response_body = _truncate_body(raw_resp.decode("utf-8", errors="replace"), RADAR_SETTINGS.RADAR_MAX_BODY_SIZE)
+                        radar_ctx.response_body = _truncate_body(redact_text(raw_resp.decode("utf-8", errors="replace")), RADAR_SETTINGS.RADAR_MAX_BODY_SIZE)
                     except Exception:
                         radar_ctx.response_body = f"[binary {len(raw_resp)} bytes]"
 
@@ -169,5 +178,6 @@ class RadarMiddleware:
 async def _safe_flush(ctx: RadarRequestContext) -> None:
     try:
         await flush_request_data(ctx)
-    except Exception:
-        logger.exception("Radar: failed to flush request data")
+    except Exception as exc:
+        # 不记录异常堆栈；Loguru diagnose=True 会把 ctx 局部变量写入文件。
+        logger.error("Radar: failed to flush request data ({})", type(exc).__name__)

@@ -86,9 +86,23 @@ server {
 - [ ] `REDIS_URL` set with strong password
 - [ ] `PROXY_HEADERS_ENABLED=true` + `TRUSTED_HOSTS` if behind nginx / gateway
 - [ ] `CORS_ORIGINS` restricted to actual frontend origins
+- [ ] `RADAR_ENABLED=false` unless Radar is explicitly required; when enabled, verify only `R_ADMIN` / `R_SUPER` can access `/__radar/api/*`
 - [ ] Logs rotated / shipped (default goes to `logs/`, retention 30 days)
 - [ ] Migrations applied: `just mm` after deploy
 - [ ] Multi-worker setup verified: only the leader writes seeds (check `app:init_done` in Redis)
+
+## Radar response when upgrading an affected deployment
+
+Radar is disabled by default. Confirm `RADAR_ENABLED` in `.env` / `.env.docker` after upgrading, and enable it only when the diagnostic need is understood. If enabled, anonymous and regular-user calls to `/__radar/api/*` must fail; only `R_ADMIN` and `R_SUPER` should succeed.
+
+If an older public deployment ran with Radar enabled:
+
+1. review Nginx, gateway, or WAF logs for historical `/__radar/api` access;
+2. invalidate potentially exposed tokens and reset passwords, API keys, or other credentials first; if signing-key exposure is suspected or global invalidation is required, assess the Sqids impact before rotating `SECRET_KEY`;
+3. remember that the fix sanitizes old rows when read but does not rewrite existing plaintext in the database;
+4. Radar tables live in the database selected by `DB_URL` and are covered by its normal backup / restore process. Before removing `radar_requests` and its cascading `radar_queries` / `radar_user_logs`, take a backup, define the exact scope, and obtain separate approval for the destructive operation. The patch performs no automatic cleanup or schema change.
+
+See [Radar sensitive-data boundaries and historical-data handling](/en/ops/radar#handling-historical-data-after-upgrade).
 
 ## See also
 

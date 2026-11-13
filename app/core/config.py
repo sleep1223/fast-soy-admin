@@ -78,6 +78,17 @@ class Settings(BaseSettings):
     GUARD_AUTO_BAN_THRESHOLD: int = 10
     GUARD_AUTO_BAN_DURATION: int = 21600
 
+    # 通用 OCR — 引擎按需懒加载；未安装 ocr extra 时接口返回明确错误
+    OCR_ENABLED: bool = True
+    OCR_MAX_IMAGE_MB: int = 10
+    OCR_MAX_PIXELS: int = 25_000_000
+    OCR_MAX_ITEMS: int = 500
+    OCR_MAX_SIDE: int = 1600
+    OCR_TIMEOUT_SECONDS: int = 30
+    OCR_QUEUE_TIMEOUT_SECONDS: int = 10
+    # RapidOCR 引擎默认按进程串行推理；除非确认引擎线程安全，不要调大该值
+    OCR_MAX_CONCURRENCY: int = 1
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

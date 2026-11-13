@@ -1,4 +1,23 @@
 const local: App.I18n.BaseSchema = {
+  ocrTools: {
+    select: 'Choose image',
+    replace: 'Replace image',
+    dropHint: 'Click to choose an image, or drag/paste a screenshot here.',
+    dropUnavailable: 'No image file was available. Copy the screenshot and try again.',
+    invalid: 'Choose a non-empty JPG, PNG, GIF or WebP image up to {size} MB',
+    recognize: 'Recognize',
+    recognizing: 'Recognizing…',
+    clear: 'Clear',
+    result: 'Recognized text',
+    confidence: 'Confidence {value}%',
+    lowConfidence: 'Low confidence, review manually',
+    emptyText: 'No text recognized. Retry or enter it manually.',
+    truncated: 'Too many results; only the first {count} items are returned.',
+    failed: 'Recognition failed. Try again.',
+    tip: 'The image is recognized in local service memory. It is not stored in the image library, and recognized text is not written to logs.',
+    editHint: 'Correct the recognized text here before the business layer parses it.',
+    imageAlt: 'Image to recognize'
+  },
   imageTools: {
     dropHint: 'Click to upload or drop images here, including downloaded image files from WeChat or WeCom chats.',
     dropUnavailable: 'No image file was available. Download the chat image first, or save it locally and upload it.',

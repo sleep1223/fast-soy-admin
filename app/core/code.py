@@ -79,6 +79,11 @@ class Code:
     UPLOAD_INVALID_IMAGE = "2408"  # 图片内容无效
     UPLOAD_TOO_LARGE = "2409"  # 上传大小超限
     UPLOAD_STORAGE_ERROR = "2410"  # 本地存储不可用
+    OCR_UNAVAILABLE = "2411"  # OCR 组件未安装或已关闭
+    OCR_INVALID_IMAGE = "2412"  # OCR 图片无效或超限
+    OCR_BUSY = "2413"  # OCR 推理队列繁忙
+    OCR_TIMEOUT = "2414"  # OCR 识别超时
+    OCR_FAILED = "2415"  # OCR 识别失败
 
     # 25xx — 限流/安全
     RATE_LIMITED = "2500"  # 请求过于频繁

@@ -112,3 +112,4 @@ Details: [Startup init & reconciliation](/en/develop/init-data).
 - [Development guide](/en/getting-started/workflow) — build a business module from scratch using the CLI
 - [API conventions](/en/develop/api) / [Response codes](/en/reference/codes) — enforced rules
 - [Business development](/en/develop/intro) — business module development entry
+- [Generic OCR](/en/develop/ocr) — local image text recognition and frontend component

@@ -112,3 +112,4 @@ models / schemas
 - [开发指南](../getting-started/workflow.md) — 用 CLI 从 0 搭一个业务模块
 - [API 约定](./api.md) / [响应码](../reference/codes.md) — 强制约定
 - [业务开发](intro.md) — 业务模块开发入口
+- [通用 OCR](./ocr.md) — 本地图片文字识别与前端组件

@@ -1,4 +1,23 @@
 const local: App.I18n.BaseSchema = {
+  ocrTools: {
+    select: '选择图片',
+    replace: '更换图片',
+    dropHint: '点击选择图片，或拖拽/粘贴截图到此处。',
+    dropUnavailable: '未读取到图片文件，请复制截图后重试。',
+    invalid: '请选择 JPG、PNG、GIF 或 WebP 图片，且不超过 {size} MB',
+    recognize: '开始识别',
+    recognizing: '识别中…',
+    clear: '清除',
+    result: '识别文本',
+    confidence: '置信度 {value}%',
+    lowConfidence: '低置信度，请人工核对',
+    emptyText: '未识别到文字，可重试或手动输入。',
+    truncated: '识别结果较多，仅返回前 {count} 项。',
+    failed: '识别失败，请重试。',
+    tip: '图片只在本地服务内存中识别，不写入图片库，也不会把识别内容写入日志。',
+    editHint: '可在此修正识别文本，再由业务层继续解析。',
+    imageAlt: '待识别图片'
+  },
   imageTools: {
     dropHint: '点击上传，或将图片拖到此区域；支持从微信、企业微信聊天拖入已下载的图片文件。',
     dropUnavailable: '未读取到图片文件，请先在聊天中下载图片再拖入，或保存到本地后上传。',

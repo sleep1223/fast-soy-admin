@@ -327,6 +327,25 @@ declare namespace App {
     };
 
     type Schema = {
+      ocrTools: {
+        select: string;
+        replace: string;
+        dropHint: string;
+        dropUnavailable: string;
+        invalid: string;
+        recognize: string;
+        recognizing: string;
+        clear: string;
+        result: string;
+        confidence: string;
+        lowConfidence: string;
+        emptyText: string;
+        truncated: string;
+        failed: string;
+        tip: string;
+        editHint: string;
+        imageAlt: string;
+      };
       imageTools: {
         dropHint: string;
         dropUnavailable: string;

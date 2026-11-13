@@ -105,6 +105,7 @@ class Worker(BaseModel, AuditMixin):
         null=True,
         related_name="workers",
         on_delete=fields.SET_NULL,
+        db_index=True,
         description="默认所属生产单位",
     )
     enabled = fields.BooleanField(default=True, description="是否在用")
@@ -131,6 +132,7 @@ class OrderUnitMapping(BaseModel, AuditMixin):
         "app_system.ProductionUnit",
         related_name="order_mappings",
         on_delete=fields.RESTRICT,
+        db_index=True,
         description="生产单位",
     )
     remark = fields.CharField(max_length=500, null=True, description="备注")
@@ -151,6 +153,7 @@ class WorkMonth(BaseModel, AuditMixin):
         "app_system.ProductionUnit",
         related_name="work_months",
         on_delete=fields.RESTRICT,
+        db_index=True,
         description="生产单位",
     )
     status = fields.CharEnumField(
@@ -182,6 +185,7 @@ class MonthlyImportBatch(BaseModel, AuditMixin):
         "app_system.WorkMonth",
         related_name="import_batches",
         on_delete=fields.RESTRICT,
+        db_index=True,
         description="月度任务",
     )
     source_type = fields.CharEnumField(
@@ -230,6 +234,7 @@ class MonthlyImportRow(BaseModel, AuditMixin):
         null=True,
         related_name="work_ticket_import_rows",
         on_delete=fields.SET_NULL,
+        db_index=True,
         description="匹配订单",
     )
     match_status = fields.CharEnumField(
@@ -282,6 +287,7 @@ class WorkTicket(BaseModel, AuditMixin):
         "app_system.WorkMonth",
         related_name="tickets",
         on_delete=fields.RESTRICT,
+        db_index=True,
         description="月度任务",
     )
     order_id: int | None
@@ -290,6 +296,7 @@ class WorkTicket(BaseModel, AuditMixin):
         null=True,
         related_name="work_tickets",
         on_delete=fields.RESTRICT,
+        db_index=True,
         description="关联订单",
     )
     order_no_snapshot = fields.CharField(max_length=100, null=True, description="订单号快照")
@@ -311,6 +318,7 @@ class WorkTicket(BaseModel, AuditMixin):
         null=True,
         related_name="tickets",
         on_delete=fields.RESTRICT,
+        db_index=True,
         description="来源导入行",
     )
     status = fields.CharEnumField(
@@ -356,6 +364,7 @@ class WorkTicketAssignment(BaseModel, AuditMixin):
         "app_system.Worker",
         related_name="ticket_assignments",
         on_delete=fields.RESTRICT,
+        db_index=True,
         description="生产人员",
     )
     source = fields.CharEnumField(
@@ -403,6 +412,7 @@ class WorkMonthStatusLog(BaseModel, AuditMixin):
         "app_system.WorkMonth",
         related_name="status_logs",
         on_delete=fields.CASCADE,
+        db_index=True,
         description="月度任务",
     )
     from_status = fields.CharEnumField(

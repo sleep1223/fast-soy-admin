@@ -70,6 +70,12 @@ from app.core.events import on as on
 from app.core.excel import ExcelColumn as ExcelColumn
 from app.core.excel import ExcelConfig as ExcelConfig
 from app.core.excel import ExcelDetail as ExcelDetail
+from app.core.excel import ExcelImportOptions as ExcelImportOptions
+from app.core.excel import ExcelImportResult as ExcelImportResult
+from app.core.excel import ExcelPreview as ExcelPreview
+from app.core.excel import parse_excel as parse_excel
+from app.core.excel import write_excel as write_excel
+from app.core.excel import write_excel_sheets as write_excel_sheets
 from app.core.exceptions import BizError as BizError
 from app.core.exceptions import SchemaValidationError as SchemaValidationError
 

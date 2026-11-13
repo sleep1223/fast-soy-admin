@@ -8,7 +8,7 @@ from app.utils import BusinessModule, BusinessRouter, PermissionSpec
 
 module = BusinessModule(
     name="work_ticket_management",
-    title="work_ticket_management",
+    title="工票工时管理",
     version="0.1.0",
     routers=[BusinessRouter(router=router, auth="permission")],
     permissions=PermissionSpec(init_data=INIT_DATA),

@@ -37,7 +37,8 @@ from app.business.work_ticket_management.schemas import (
     WorkTicketSearch,
     WorkTimeEntrySearch,
 )
-from app.utils import CRUDRouter, ExcelConfig, SearchFieldConfig, require_buttons
+from app.business.work_ticket_management.services import master_data
+from app.utils import CommonIds, CRUDRouter, ExcelConfig, SearchFieldConfig, SqidPath, Success, require_buttons
 
 production_unit_crud = CRUDRouter(
     prefix="/production_units",
@@ -132,7 +133,7 @@ monthly_import_row_crud = CRUDRouter(
         exact_fields=["match_status", "match_source", "handling_status", "batch_id", "order_id", "duplicate_of_row_id"],
         range_fields=["handled_at"],
     ),
-    enable_routes={"list", "get"},
+    enable_routes=set(),
     summary_prefix="导入原始明细",
 )
 
@@ -146,7 +147,7 @@ work_ticket_crud = CRUDRouter(
         exact_fields=["code_source", "status", "reconcile_status", "work_month_id", "order_id", "source_import_row_id"],
         range_fields=["voided_at"],
     ),
-    enable_routes={"list", "get"},
+    enable_routes=set(),
     summary_prefix="工票台账",
 )
 
@@ -166,7 +167,7 @@ work_time_entry_crud = CRUDRouter(
     list_schema=WorkTimeEntrySearch,
     route_key_prefix="work_ticket_management.work_time_entries",
     search_fields=SearchFieldConfig(contains_fields=["accounting_month", "remark"], exact_fields=["assignment_id"], range_fields=["work_date"]),
-    enable_routes={"list", "get"},
+    enable_routes=set(),
     summary_prefix="工时明细",
 )
 
@@ -179,6 +180,31 @@ work_month_status_log_crud = CRUDRouter(
     enable_routes={"list", "get"},
     summary_prefix="月度状态日志",
 )
+
+
+@worker_crud.override("delete")
+async def _delete_worker(item_id: SqidPath) -> Success:
+    await master_data.remove_worker(item_id)
+    return Success(msg="删除成功")
+
+
+@worker_crud.override("batch_delete")
+async def _delete_workers(obj_in: CommonIds) -> Success:
+    await master_data.remove_workers(obj_in.ids)
+    return Success(msg="删除成功")
+
+
+@production_unit_crud.override("delete")
+async def _delete_production_unit(item_id: SqidPath) -> Success:
+    await master_data.remove_production_unit(item_id)
+    return Success(msg="删除成功")
+
+
+@production_unit_crud.override("batch_delete")
+async def _delete_production_units(obj_in: CommonIds) -> Success:
+    await master_data.remove_production_units(obj_in.ids)
+    return Success(msg="删除成功")
+
 
 router = APIRouter(tags=["work_ticket_management"])
 router.include_router(production_unit_crud.router)

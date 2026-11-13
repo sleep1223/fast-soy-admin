@@ -281,5 +281,106 @@ export const generatedRoutes: GeneratedRoute[] = [
         }
       }
     ]
+  },
+  {
+    name: 'work-ticket-management',
+    path: '/work-ticket-management',
+    component: 'layout.base',
+    meta: {
+      title: 'work-ticket-management',
+      i18nKey: 'route.work-ticket-management'
+    },
+    children: [
+      {
+        name: 'work-ticket-management_monthly-import-batch',
+        path: '/work-ticket-management/monthly-import-batch',
+        component: 'view.work-ticket-management_monthly-import-batch',
+        meta: {
+          title: 'work-ticket-management_monthly-import-batch',
+          i18nKey: 'route.work-ticket-management_monthly-import-batch'
+        }
+      },
+      {
+        name: 'work-ticket-management_monthly-import-row',
+        path: '/work-ticket-management/monthly-import-row',
+        component: 'view.work-ticket-management_monthly-import-row',
+        meta: {
+          title: 'work-ticket-management_monthly-import-row',
+          i18nKey: 'route.work-ticket-management_monthly-import-row'
+        }
+      },
+      {
+        name: 'work-ticket-management_order-unit-mapping',
+        path: '/work-ticket-management/order-unit-mapping',
+        component: 'view.work-ticket-management_order-unit-mapping',
+        meta: {
+          title: 'work-ticket-management_order-unit-mapping',
+          i18nKey: 'route.work-ticket-management_order-unit-mapping'
+        }
+      },
+      {
+        name: 'work-ticket-management_production-unit',
+        path: '/work-ticket-management/production-unit',
+        component: 'view.work-ticket-management_production-unit',
+        meta: {
+          title: 'work-ticket-management_production-unit',
+          i18nKey: 'route.work-ticket-management_production-unit'
+        }
+      },
+      {
+        name: 'work-ticket-management_work-month',
+        path: '/work-ticket-management/work-month',
+        component: 'view.work-ticket-management_work-month',
+        meta: {
+          title: 'work-ticket-management_work-month',
+          i18nKey: 'route.work-ticket-management_work-month'
+        }
+      },
+      {
+        name: 'work-ticket-management_work-month-status-log',
+        path: '/work-ticket-management/work-month-status-log',
+        component: 'view.work-ticket-management_work-month-status-log',
+        meta: {
+          title: 'work-ticket-management_work-month-status-log',
+          i18nKey: 'route.work-ticket-management_work-month-status-log'
+        }
+      },
+      {
+        name: 'work-ticket-management_work-ticket',
+        path: '/work-ticket-management/work-ticket',
+        component: 'view.work-ticket-management_work-ticket',
+        meta: {
+          title: 'work-ticket-management_work-ticket',
+          i18nKey: 'route.work-ticket-management_work-ticket'
+        }
+      },
+      {
+        name: 'work-ticket-management_work-ticket-assignment',
+        path: '/work-ticket-management/work-ticket-assignment',
+        component: 'view.work-ticket-management_work-ticket-assignment',
+        meta: {
+          title: 'work-ticket-management_work-ticket-assignment',
+          i18nKey: 'route.work-ticket-management_work-ticket-assignment'
+        }
+      },
+      {
+        name: 'work-ticket-management_work-time-entry',
+        path: '/work-ticket-management/work-time-entry',
+        component: 'view.work-ticket-management_work-time-entry',
+        meta: {
+          title: 'work-ticket-management_work-time-entry',
+          i18nKey: 'route.work-ticket-management_work-time-entry'
+        }
+      },
+      {
+        name: 'work-ticket-management_worker',
+        path: '/work-ticket-management/worker',
+        component: 'view.work-ticket-management_worker',
+        meta: {
+          title: 'work-ticket-management_worker',
+          i18nKey: 'route.work-ticket-management_worker'
+        }
+      }
+    ]
   }
 ];

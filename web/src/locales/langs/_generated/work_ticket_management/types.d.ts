@@ -5,6 +5,7 @@ declare global {
   namespace App.I18n {
     interface GeneratedPages {
       work_ticket_management: {
+        workflow: Record<string, string>;
         common: {
           status: string;
           form: { status: string };

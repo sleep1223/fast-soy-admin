@@ -189,16 +189,12 @@ const routeMap: RouteMap = {
   "weighbridge-settlement_settlement-rate": "/weighbridge-settlement/settlement-rate",
   "weighbridge-settlement_weighing-ticket": "/weighbridge-settlement/weighing-ticket",
   "work-ticket-management": "/work-ticket-management",
-  "work-ticket-management_monthly-import-batch": "/work-ticket-management/monthly-import-batch",
-  "work-ticket-management_monthly-import-row": "/work-ticket-management/monthly-import-row",
-  "work-ticket-management_order-unit-mapping": "/work-ticket-management/order-unit-mapping",
-  "work-ticket-management_production-unit": "/work-ticket-management/production-unit",
-  "work-ticket-management_work-month": "/work-ticket-management/work-month",
-  "work-ticket-management_work-month-status-log": "/work-ticket-management/work-month-status-log",
-  "work-ticket-management_work-ticket": "/work-ticket-management/work-ticket",
-  "work-ticket-management_work-ticket-assignment": "/work-ticket-management/work-ticket-assignment",
-  "work-ticket-management_work-time-entry": "/work-ticket-management/work-time-entry",
-  "work-ticket-management_worker": "/work-ticket-management/worker"
+  "work-ticket-management_master-data": "/work-ticket-management/master-data",
+  "work-ticket-management_reconciliation": "/work-ticket-management/reconciliation",
+  "work-ticket-management_reports": "/work-ticket-management/reports",
+  "work-ticket-management_tickets": "/work-ticket-management/tickets",
+  "work-ticket-management_time-entries": "/work-ticket-management/time-entries",
+  "work-ticket-management_workbench": "/work-ticket-management/workbench"
 };
 
 /**

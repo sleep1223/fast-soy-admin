@@ -29,6 +29,7 @@ import {
   fetchTickets,
   fetchTicket,
   fetchVerifyWorkMonth,
+  fetchWorkMonthStatusLogs,
   fetchWorkMonthSummary
 } from '@/service/api';
 import { $t } from '@/locales';
@@ -372,6 +373,37 @@ async function exportMonth() {
   if (data) downloadExcel(data);
 }
 
+// ---- audit ----
+const statusLogsVisible = ref(false);
+const statusLogsLoading = ref(false);
+const statusLogs = ref<Api.WorkTicketManagement.StatusLog[]>([]);
+async function openStatusLogs() {
+  if (!summary.value) return;
+  statusLogsVisible.value = true;
+  statusLogsLoading.value = true;
+  const { data } = await fetchWorkMonthStatusLogs(summary.value.id);
+  statusLogsLoading.value = false;
+  statusLogs.value = data ?? [];
+}
+const statusLogColumns: DataTableColumns<Api.WorkTicketManagement.StatusLog> = [
+  { key: 'createdAt', title: $t('page.work_ticket_management.workflow.createdAt'), width: 170 },
+  {
+    key: 'fromStatus',
+    title: $t('page.work_ticket_management.workflow.fromStatus'),
+    width: 110,
+    render: (row: Api.WorkTicketManagement.StatusLog) => (row.fromStatus ? <StatusTag kind="month" value={row.fromStatus} /> : '—')
+  },
+  {
+    key: 'toStatus',
+    title: $t('page.work_ticket_management.workflow.toStatus'),
+    width: 110,
+    render: (row: Api.WorkTicketManagement.StatusLog) => <StatusTag kind="month" value={row.toStatus} />
+  },
+  { key: 'action', title: $t('page.work_ticket_management.workflow.action'), width: 100 },
+  { key: 'reason', title: $t('page.work_ticket_management.workflow.reason'), minWidth: 200 },
+  { key: 'createdBy', title: $t('page.work_ticket_management.workflow.createdBy'), width: 120 }
+];
+
 // ---- OCR ----
 const ocrVisible = ref(false);
 const ocrCandidates = ref<Api.WorkTicketManagement.OcrCandidate[]>([]);
@@ -471,6 +503,9 @@ const codeColumns: DataTableColumns<Api.WorkTicketManagement.CodePreviewRow> = [
       </NButton>
       <NButton size="small" @click="openOcr">{{ $t('page.work_ticket_management.workflow.ocr') }}</NButton>
       <NButton size="small" @click="exportMonth">{{ $t('page.work_ticket_management.workflow.export') }}</NButton>
+      <NButton size="small" :disabled="!summary" @click="openStatusLogs">
+        {{ $t('page.work_ticket_management.workflow.statusLogs') }}
+      </NButton>
       <NPopconfirm @positive-click="verifyMonth">
         <template #trigger>
           <NButton size="small" :disabled="readonlyMonth || monthStatus !== 'in_progress'">
@@ -885,6 +920,15 @@ const codeColumns: DataTableColumns<Api.WorkTicketManagement.CodePreviewRow> = [
           <NButton type="primary" @click="submitReopen">{{ $t('common.confirm') }}</NButton>
         </NSpace>
       </template>
+    </NModal>
+
+    <NModal
+      v-model:show="statusLogsVisible"
+      preset="card"
+      :title="$t('page.work_ticket_management.workflow.statusLogs')"
+      class="w-900px max-w-95vw"
+    >
+      <NDataTable :columns="statusLogColumns" :data="statusLogs" :loading="statusLogsLoading" size="small" />
     </NModal>
 
     <NModal

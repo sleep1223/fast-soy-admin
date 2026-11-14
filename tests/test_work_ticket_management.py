@@ -20,6 +20,7 @@ from app.business.work_ticket_management.schemas_workflow import (
     ImportRowMatchIn,
     ImportRowSearchIn,
     ManualImportIn,
+    MappingSearchIn,
     OcrCandidateIn,
     ReconcileCategory,
     ReconcileSearchIn,
@@ -64,6 +65,10 @@ async def test_import_match_mapping_and_ticket_snapshots(wt_db):
     other_unit = await ProductionUnit.create(code="U2", name="二车间")
     other_order = await Order.create(order_no="O-100202", part_no="100202", name="纵梁", net_weight="2.000000")
     await master_data.create_mapping_from_payload(other_order.id, other_unit.id, None, "tester")
+    mapping_total, mapping_rows = await master_data.search_mappings(MappingSearchIn.model_validate({"keyword": "O-100202", "current": 1, "size": 10}))
+    assert mapping_total == 1
+    assert mapping_rows[0].order_no == "O-100202"
+    assert mapping_rows[0].production_unit_name == "二车间"
 
     result = await imports.manual_import(
         ManualImportIn.model_validate(
@@ -174,6 +179,16 @@ async def test_assignment_time_matrix_revision_and_closed_month(wt_db):
     assert summary.status == WorkMonthStatus.verified
     with pytest.raises(BizError, match="核对"):
         await tickets.create_ticket(TicketCreateIn.model_validate({"workMonthId": encode_id(month.id), "orderId": encode_id(order.id)}))
+    with pytest.raises(BizError, match="核对"):
+        await imports.manual_import(
+            ManualImportIn.model_validate(
+                {
+                    "workMonthId": encode_id(month.id),
+                    "sourceType": "plan",
+                    "rows": [{"rawPartNo": "TIME-1"}],
+                }
+            )
+        )
     reopened = await months.reopen_month(month.id, summary.revision, "补录工时", "tester")
     assert reopened.status == WorkMonthStatus.in_progress
     verified_again = await months.verify_month(month.id, reopened.revision, None, "tester")

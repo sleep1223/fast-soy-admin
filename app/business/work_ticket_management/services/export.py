@@ -105,6 +105,8 @@ async def export_month_workbook(month_id: int) -> bytes:
         page = 2
         while len(items) < first_total:
             _, more = await reconciliation_search(month_id, ReconcileSearchIn.model_validate({"category": category, "current": page, "size": 1000}))
+            if not more:
+                break
             items.extend(more)
             page += 1
         for item in items:

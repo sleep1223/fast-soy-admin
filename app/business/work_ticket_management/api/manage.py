@@ -7,6 +7,7 @@ work_ticket_management 管理接口 — 基础资料 CRUD 与聚合资源只读�
 
 from fastapi import APIRouter
 
+from app.business.work_ticket_management.api.common import page
 from app.business.work_ticket_management.controllers import (
     monthly_import_batch_controller,
     monthly_import_row_controller,
@@ -37,8 +38,9 @@ from app.business.work_ticket_management.schemas import (
     WorkTicketSearch,
     WorkTimeEntrySearch,
 )
+from app.business.work_ticket_management.schemas_workflow import MappingSearchIn
 from app.business.work_ticket_management.services import master_data
-from app.utils import CommonIds, CRUDRouter, ExcelConfig, SearchFieldConfig, SqidPath, Success, require_buttons
+from app.utils import CommonIds, CRUDRouter, ExcelConfig, SearchFieldConfig, SqidPath, Success, SuccessExtra, require_buttons
 
 production_unit_crud = CRUDRouter(
     prefix="/production_units",
@@ -207,6 +209,14 @@ async def _delete_production_units(obj_in: CommonIds) -> Success:
 
 
 router = APIRouter(tags=["work_ticket_management"])
+
+
+@router.post("/order_unit_mappings/search", summary="订单单位关系分页查询", name="work_ticket_management.order_unit_mappings.search")
+async def search_mappings(obj_in: MappingSearchIn) -> SuccessExtra:
+    total, rows = await master_data.search_mappings(obj_in)
+    return page(rows, total, obj_in.current, obj_in.size)
+
+
 router.include_router(production_unit_crud.router)
 router.include_router(worker_crud.router)
 router.include_router(order_unit_mapping_crud.router)

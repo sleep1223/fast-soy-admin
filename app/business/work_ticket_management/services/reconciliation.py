@@ -80,8 +80,8 @@ async def _compute(month_id: int, db: BaseDBAsyncClient) -> dict[str, Any]:
     tickets = list(await WorkTicket.filter(work_month_id=month_id, status=TicketStatus.active).using_db(db).exclude(reconcile_status=ReconcileStatus.ignored))
     all_tickets = list(await WorkTicket.filter(work_month_id=month_id, status=TicketStatus.active).using_db(db))
     ticket_order_ids = {ticket.order_id for ticket in all_tickets if ticket.order_id is not None}
-    assigned_ids = set(await WorkTicketAssignment.filter(ticket__work_month_id=month_id, ticket__status=TicketStatus.active).values_list("ticket_id", flat=True))
-    timed_ids = set(await WorkTimeEntry.filter(assignment__ticket__work_month_id=month_id, assignment__ticket__status=TicketStatus.active).values_list("assignment__ticket_id", flat=True))
+    assigned_ids = set(await WorkTicketAssignment.filter(ticket__work_month_id=month_id, ticket__status=TicketStatus.active).using_db(db).values_list("ticket_id", flat=True))
+    timed_ids = set(await WorkTimeEntry.filter(assignment__ticket__work_month_id=month_id, assignment__ticket__status=TicketStatus.active).using_db(db).values_list("assignment__ticket_id", flat=True))
     orphan_tickets = [ticket for ticket in tickets if ticket.order_id is None]
     unassigned = [ticket for ticket in tickets if ticket.id not in assigned_ids]
     no_time = [ticket for ticket in tickets if ticket.id in assigned_ids and ticket.id not in timed_ids]
@@ -90,11 +90,11 @@ async def _compute(month_id: int, db: BaseDBAsyncClient) -> dict[str, Any]:
     plan_missing = [row for row in plan if row.normalized_part_no not in actual_map]
     actual_missing = [row for row in actual if row.normalized_part_no not in plan_map]
     duplicates: dict[str, list[WorkTicket]] = defaultdict(list)
-    for ticket in all_tickets:
+    for ticket in tickets:
         if ticket.ticket_code_key:
             duplicates[ticket.ticket_code_key].append(ticket)
     duplicate_groups = {key: value for key, value in duplicates.items() if len(value) > 1}
-    current_keys = {ticket.ticket_code_key for ticket in all_tickets if ticket.ticket_code_key}
+    current_keys = {ticket.ticket_code_key for ticket in tickets if ticket.ticket_code_key}
     cross_month: dict[str, list[str]] = defaultdict(list)
     if current_keys:
         others = (
@@ -110,7 +110,7 @@ async def _compute(month_id: int, db: BaseDBAsyncClient) -> dict[str, Any]:
         )
         for ticket in others:
             cross_month[ticket.ticket_code_key].append(ticket.work_month.year_month)
-    cross_tickets = [ticket for ticket in all_tickets if ticket.ticket_code_key in cross_month]
+    cross_tickets = [ticket for ticket in tickets if ticket.ticket_code_key in cross_month]
     counts = _empty_counts()
     counts[ReconcileCategory.plan_missing_actual.value] = len(plan_missing)
     counts[ReconcileCategory.actual_missing_plan.value] = len(actual_missing)

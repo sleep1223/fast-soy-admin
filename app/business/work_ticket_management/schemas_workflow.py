@@ -73,6 +73,24 @@ class OrderCandidateOut(SchemaBase):
     mapped_units: list[str] = Field(default_factory=list)
 
 
+class MappingSearchIn(PageQueryBase):
+    model_config = ConfigDict(extra="forbid")
+    keyword: str | None = Field(None, max_length=100)
+    production_unit_id: SqidId | None = None
+
+
+class MappingRowOut(SchemaBase):
+    id: SqidId
+    order_id: SqidId
+    order_no: str | None
+    part_no: str | None
+    name: str | None
+    production_unit_id: SqidId
+    production_unit_name: str
+    remark: str | None
+    created_at: datetime
+
+
 # ============================================================
 # 月度任务
 # ============================================================

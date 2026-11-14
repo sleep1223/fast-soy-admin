@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import Any
 
 from tortoise.backends.base.client import BaseDBAsyncClient
+from tortoise.expressions import Q
 from tortoise.transactions import in_transaction
 
 from app.business.work_ticket_management.models import (
@@ -15,7 +16,7 @@ from app.business.work_ticket_management.models import (
     WorkMonth,
     WorkTicketAssignment,
 )
-from app.business.work_ticket_management.schemas_workflow import OrderCandidateOut, OrderCandidateQuery, UnitOption, WorkerOption
+from app.business.work_ticket_management.schemas_workflow import MappingRowOut, MappingSearchIn, OrderCandidateOut, OrderCandidateQuery, UnitOption, WorkerOption
 from app.business.work_ticket_management.services.common import sqid
 from app.business.work_ticket_management.services.matching import Candidate, candidates
 from app.business.work_ticket_management.services.order_access import get_order
@@ -98,6 +99,38 @@ async def order_candidates(query: OrderCandidateQuery, db: BaseDBAsyncClient | N
 async def all_mappings(order_id: int, db: BaseDBAsyncClient) -> dict[int, str]:
     mappings = await OrderUnitMapping.filter(order_id=order_id).using_db(db).prefetch_related("production_unit")
     return {mapping.production_unit_id: mapping.production_unit.name for mapping in mappings if mapping.production_unit is not None}
+
+
+async def search_mappings(search: MappingSearchIn) -> tuple[int, list[MappingRowOut]]:
+    query = OrderUnitMapping.all()
+    if search.production_unit_id is not None:
+        query = query.filter(production_unit_id=search.production_unit_id)
+    if search.keyword:
+        keyword = search.keyword.strip()
+        if keyword:
+            query = query.filter(Q(order__order_no__icontains=keyword) | Q(order__part_no__icontains=keyword) | Q(order__name__icontains=keyword) | Q(production_unit__name__icontains=keyword))
+    total = await query.count()
+    mappings = await query.prefetch_related("order", "production_unit").order_by("-id").offset((search.current - 1) * search.size).limit(search.size)
+    rows: list[MappingRowOut] = []
+    for mapping in mappings:
+        order = mapping.order
+        unit = mapping.production_unit
+        if order is None or unit is None:
+            continue
+        rows.append(
+            MappingRowOut(
+                id=sqid(mapping.id),
+                order_id=sqid(mapping.order_id),
+                order_no=getattr(order, "order_no", None),
+                part_no=getattr(order, "part_no", None),
+                name=getattr(order, "name", None),
+                production_unit_id=sqid(mapping.production_unit_id),
+                production_unit_name=unit.name,
+                remark=mapping.remark,
+                created_at=mapping.created_at,
+            )
+        )
+    return total, rows
 
 
 async def confirm_mapping(order_id: int, production_unit_id: int, db: BaseDBAsyncClient, actor: str, remark: str | None = None) -> OrderUnitMapping:

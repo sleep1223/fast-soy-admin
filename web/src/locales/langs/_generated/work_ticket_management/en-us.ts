@@ -165,6 +165,8 @@ export default {
         clearCell: 'Clear',
         deleteTime: 'Delete time',
         timeSaved: 'Time saved',
+        previewTruncated: 'Preview shows the first 500 rows; all rows will still be committed',
+        unsavedTimeChanges: 'You have unsaved time changes. Leave anyway?',
         reportBasis: 'Report basis',
         ticketMonth: 'Ticket month',
         workDateBasis: 'Work date',

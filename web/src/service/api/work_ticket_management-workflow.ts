@@ -26,6 +26,19 @@ export function fetchOrderCandidates(data: {
   return request<Api.WorkTicketManagement.OrderCandidate[]>({ url: `${base}/orders/candidates`, method: 'post', data });
 }
 
+export function fetchSearchOrderUnitMappings(data: {
+  current: number;
+  size: number;
+  keyword?: string | null;
+  productionUnitId?: string | null;
+}) {
+  return request<Api.WorkTicketManagement.Page<Api.WorkTicketManagement.MappingRow>, 'json'>({
+    url: `${base}/order_unit_mappings/search`,
+    method: 'post',
+    data
+  });
+}
+
 // ---- months ----
 export function fetchOpenWorkMonth(data: { yearMonth: string; productionUnitId: string }) {
   return request<Api.WorkTicketManagement.WorkMonthSummary, 'json'>({

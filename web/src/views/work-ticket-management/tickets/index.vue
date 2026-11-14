@@ -230,6 +230,11 @@ async function markReconcile(status: 'checked' | 'ignored') {
 const ocrVisible = ref(false);
 const ocrCandidates = ref<Api.WorkTicketManagement.OcrCandidate[]>([]);
 const ocrSelected = ref<string[]>([]);
+function openOcr() {
+  ocrCandidates.value = [];
+  ocrSelected.value = [];
+  ocrVisible.value = true;
+}
 async function onOcrRecognized(result: Api.Ocr.Result) {
   const monthData = await ensureMonth();
   if (!monthData) return;
@@ -343,7 +348,7 @@ onMounted(async () => {
         <NButton size="small" :disabled="!checkedRowKeys.length" @click="openBatchAssign">
           {{ $t('page.work_ticket_management.workflow.assignWorkers') }}
         </NButton>
-        <NButton size="small" :disabled="!checkedRowKeys.length" @click="ocrVisible = true">
+        <NButton size="small" :disabled="!checkedRowKeys.length" @click="openOcr">
           {{ $t('page.work_ticket_management.workflow.ocr') }}
         </NButton>
         <NButton size="small" @click="exportTickets">{{ $t('page.work_ticket_management.workflow.export') }}</NButton>
@@ -587,8 +592,8 @@ onMounted(async () => {
       <NCheckboxGroup v-if="ocrCandidates.length" v-model:value="ocrSelected" class="mt-12px">
         <NSpace vertical>
           <NCheckbox
-            v-for="candidate in ocrCandidates"
-            :key="candidate.normalized"
+            v-for="(candidate, index) in ocrCandidates"
+            :key="`${candidate.normalized}-${index}`"
             :value="candidate.normalized"
             :label="`${candidate.original} → ${candidate.normalized}`"
           />

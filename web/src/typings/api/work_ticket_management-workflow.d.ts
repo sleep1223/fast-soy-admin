@@ -12,6 +12,18 @@ declare namespace Api {
       enabled: boolean;
     };
 
+    type MappingRow = {
+      id: Id;
+      orderId: Id;
+      orderNo: string | null;
+      partNo: string | null;
+      name: string | null;
+      productionUnitId: Id;
+      productionUnitName: string;
+      remark: string | null;
+      createdAt: string;
+    };
+
     type OrderCandidate = {
       id: Id;
       orderNo: string;

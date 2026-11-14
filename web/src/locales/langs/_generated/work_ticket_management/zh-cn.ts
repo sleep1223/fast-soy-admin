@@ -166,6 +166,8 @@ export default {
         clearCell: '清空',
         deleteTime: '删除工时',
         timeSaved: '工时已保存',
+        previewTruncated: '预览仅显示前 500 行，提交时仍会处理全部数据',
+        unsavedTimeChanges: '有未保存的工时修改，确定离开？',
         reportBasis: '统计口径',
         ticketMonth: '工票归属月份',
         workDateBasis: '实际工作日期',

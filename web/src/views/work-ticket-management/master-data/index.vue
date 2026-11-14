@@ -11,13 +11,13 @@ import {
   fetchExportProductionUnit,
   fetchExportWorker,
   fetchGetOrderList,
-  fetchGetOrderUnitMappingList,
   fetchGetProductionUnitList,
   fetchGetWorkerList,
   fetchImportProductionUnit,
   fetchImportWorker,
   fetchPreviewImportProductionUnit,
   fetchPreviewImportWorker,
+  fetchSearchOrderUnitMappings,
   fetchProductionUnitImportTemplate,
   fetchUpdateProductionUnit,
   fetchUpdateWorker,
@@ -57,7 +57,7 @@ function unitRowKey(row: Api.WorkTicketManagementManage.ProductionUnit) {
 function workerRowKey(row: Api.WorkTicketManagementManage.Worker) {
   return row.id;
 }
-function mappingRowKey(row: Api.WorkTicketManagementManage.OrderUnitMapping) {
+function mappingRowKey(row: Api.WorkTicketManagement.MappingRow) {
   return row.id;
 }
 async function loadUnits() {
@@ -110,8 +110,9 @@ async function loadWorkers() {
   }
 }
 
-const mappings = ref<Api.WorkTicketManagementManage.OrderUnitMapping[]>([]);
+const mappings = ref<Api.WorkTicketManagement.MappingRow[]>([]);
 const mappingLoading = ref(false);
+const mappingKeyword = ref('');
 const mappingPagination = reactive({
   page: 1,
   pageSize: 10,
@@ -131,9 +132,10 @@ const mappingPagination = reactive({
 
 async function loadMappings() {
   mappingLoading.value = true;
-  const { data, error } = await fetchGetOrderUnitMappingList({
+  const { data, error } = await fetchSearchOrderUnitMappings({
     current: mappingPagination.page,
-    size: mappingPagination.pageSize
+    size: mappingPagination.pageSize,
+    keyword: mappingKeyword.value || null
   });
   mappingLoading.value = false;
   if (!error && data) {
@@ -306,14 +308,16 @@ const workerColumns = [
 ];
 
 const mappingColumns = [
-  { key: 'orderId', title: $t('page.work_ticket_management.workflow.orderNo'), minWidth: 160 },
-  { key: 'productionUnitId', title: $t('page.work_ticket_management.workflow.unit'), minWidth: 160, render: (row: Api.WorkTicketManagementManage.OrderUnitMapping) => unitName(row.productionUnitId) },
+  { key: 'orderNo', title: $t('page.work_ticket_management.workflow.orderNo'), minWidth: 150 },
+  { key: 'partNo', title: $t('page.work_ticket_management.workflow.partNo'), minWidth: 130 },
+  { key: 'name', title: $t('page.work_ticket_management.workflow.name'), minWidth: 160 },
+  { key: 'productionUnitName', title: $t('page.work_ticket_management.workflow.unit'), minWidth: 140 },
   { key: 'remark', title: $t('page.work_ticket_management.workflow.remark'), minWidth: 180 },
   {
     key: 'actions',
     title: $t('page.work_ticket_management.workflow.actions'),
     width: 100,
-    render: (row: Api.WorkTicketManagementManage.OrderUnitMapping) => (
+    render: (row: Api.WorkTicketManagement.MappingRow) => (
       <NPopconfirm onPositiveClick={() => removeMapping(row.id)}>
         {{
           default: () => $t('common.confirmDelete'),
@@ -413,6 +417,16 @@ loadMappings();
 
         <NTabPane name="mappings" :tab="$t('page.work_ticket_management.workflow.mappings')">
           <NSpace class="mb-12px" align="center" wrap>
+            <NInput
+              v-model:value="mappingKeyword"
+              clearable
+              :placeholder="$t('page.work_ticket_management.workflow.search')"
+              class="w-220px"
+              @keyup.enter="loadMappings"
+            />
+            <NButton size="small" @click="loadMappings">
+              {{ $t('page.work_ticket_management.workflow.search') }}
+            </NButton>
             <NButton
               size="small"
               type="primary"

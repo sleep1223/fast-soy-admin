@@ -375,6 +375,10 @@ async function exportMonth() {
 // ---- OCR ----
 const ocrVisible = ref(false);
 const ocrCandidates = ref<Api.WorkTicketManagement.OcrCandidate[]>([]);
+function openOcr() {
+  ocrCandidates.value = [];
+  ocrVisible.value = true;
+}
 async function onOcrRecognized(result: Api.Ocr.Result) {
   if (!summary.value) return;
   const { data } = await fetchOcrCandidates(summary.value.id, result.text, true);
@@ -465,7 +469,7 @@ const codeColumns: DataTableColumns<Api.WorkTicketManagement.CodePreviewRow> = [
       <NButton size="small" :disabled="readonlyMonth" @click="openCodePreview">
         {{ $t('page.work_ticket_management.workflow.generateCodes') }}
       </NButton>
-      <NButton size="small" @click="ocrVisible = true">{{ $t('page.work_ticket_management.workflow.ocr') }}</NButton>
+      <NButton size="small" @click="openOcr">{{ $t('page.work_ticket_management.workflow.ocr') }}</NButton>
       <NButton size="small" @click="exportMonth">{{ $t('page.work_ticket_management.workflow.export') }}</NButton>
       <NPopconfirm @positive-click="verifyMonth">
         <template #trigger>
@@ -711,7 +715,16 @@ const codeColumns: DataTableColumns<Api.WorkTicketManagement.CodePreviewRow> = [
           <NDescriptionsItem :label="$t('page.work_ticket_management.workflow.missing')">
             {{ importPreview.missingRows }}
           </NDescriptionsItem>
+          <NDescriptionsItem :label="$t('page.work_ticket_management.workflow.invalid')">
+            {{ importPreview.invalidRows }}
+          </NDescriptionsItem>
+          <NDescriptionsItem :label="$t('page.work_ticket_management.workflow.duplicate')">
+            {{ importPreview.duplicateRows }}
+          </NDescriptionsItem>
         </NDescriptions>
+        <NAlert v-if="importPreview?.truncated" type="info">
+          {{ $t('page.work_ticket_management.workflow.previewTruncated') }}
+        </NAlert>
         <NDataTable
           v-if="importPreview"
           :columns="[
@@ -882,7 +895,7 @@ const codeColumns: DataTableColumns<Api.WorkTicketManagement.CodePreviewRow> = [
     >
       <OcrRecognizer :max-size-mb="10" @recognized="onOcrRecognized" />
       <NList v-if="ocrCandidates.length" bordered class="mt-12px">
-        <NListItem v-for="candidate in ocrCandidates" :key="candidate.original + candidate.normalized">
+        <NListItem v-for="(candidate, index) in ocrCandidates" :key="`${candidate.normalized}-${index}`">
           <div class="flex items-center justify-between gap-8px">
             <span>
               {{ candidate.original }} →

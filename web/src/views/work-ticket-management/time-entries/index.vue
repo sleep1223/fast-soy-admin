@@ -1,5 +1,6 @@
 <script setup lang="tsx">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { onBeforeRouteLeave } from 'vue-router';
 import dayjs from 'dayjs';
 import type { DataTableColumns } from 'naive-ui';
 import { NButton, NInputNumber, NPopconfirm, NSpace } from 'naive-ui';
@@ -36,6 +37,7 @@ const matrix = ref<Api.WorkTicketManagement.TimeMatrix | null>(null);
 const matrixLoading = ref(false);
 const saving = ref(false);
 const cellValues = reactive<Record<string, number | null>>({});
+const matrixDirty = ref(false);
 
 async function loadUnits() {
   const { data } = await fetchProductionUnitOptions();
@@ -66,6 +68,7 @@ async function loadMatrix() {
   data?.entries.forEach(entry => {
     cellValues[`${entry.ticketId}:${entry.workerId}`] = Number(entry.hours);
   });
+  matrixDirty.value = false;
 }
 async function refreshSummary() {
   if (!summary.value) return;
@@ -81,6 +84,17 @@ function cellValue(ticketId: string, workerId: string) {
 }
 function setCell(ticketId: string, workerId: string, value: number | null) {
   cellValues[cellKey(ticketId, workerId)] = value !== null && value > 0 ? value : null;
+  matrixDirty.value = true;
+}
+function confirmDiscardMatrix() {
+  if (!matrixDirty.value) return true;
+  return window.confirm($t('page.work_ticket_management.workflow.unsavedTimeChanges'));
+}
+onBeforeRouteLeave(() => confirmDiscardMatrix());
+function onBeforeUnload(event: BeforeUnloadEvent) {
+  if (!matrixDirty.value) return;
+  event.preventDefault();
+  event.returnValue = '';
 }
 function existingEntry(ticketId: string, workerId: string) {
   return matrix.value?.entries.find(entry => entry.ticketId === ticketId && entry.workerId === workerId);
@@ -262,9 +276,11 @@ watch(selectedWorkerIds, () => {
   if (tab.value === 'matrix') loadMatrix();
 });
 onMounted(async () => {
+  window.addEventListener('beforeunload', onBeforeUnload);
   await loadUnits();
   if (unitId.value) await loadMatrix();
 });
+onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload));
 </script>
 
 <template>

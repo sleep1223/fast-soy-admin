@@ -83,7 +83,7 @@ draft → in_progress → verified → closed
 
 | 分组 | 主要端点 |
 | --- | --- |
-| 主数据 | `GET /options/production_units`、`GET /options/workers`、`POST /orders/candidates` |
+| 主数据 | `GET /options/production_units`、`GET /options/workers`、`POST /orders/candidates`、`POST /order_unit_mappings/search` |
 | 月度 | `POST /work_months/open`、`GET /work_months/{id}/summary`、`/status-logs`、`POST /verify`、`/close`、`/reopen`、`/export` |
 | 导入 | `POST /monthly_import_batches/preview`、`/commit`、`/manual`、`/{id}/void`、`POST /monthly_import_rows/search`、`PATCH /{id}`、`POST /{id}/match`、`/{id}/ignore`、`/batch-match` |
 | 工票 | `POST /work_tickets/search`、`GET /{id}`、`POST /`、`PATCH /{id}`、`/{id}/void`、`/assign`、`/unassign`、`/batch-assign`、`/reconcile`、`/export` |

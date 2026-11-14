@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
 from app.business.work_ticket_management.models import (
+    ProductionUnit,
     ReconcileStatus,
     TicketStatus,
+    Worker,
+    WorkMonth,
     WorkTicket,
     WorkTicketAssignment,
     WorkTimeEntry,
@@ -37,7 +41,7 @@ def _in_range(month: str, start: str | None, end: str | None) -> bool:
     return (start is None or month >= start) and (end is None or month <= end)
 
 
-async def _tickets(filters: ReportFilter) -> list[WorkTicket]:
+async def _tickets(filters: ReportFilter) -> tuple[list[WorkTicket], dict[int, WorkMonth]]:
     query = WorkTicket.all()
     if not filters.include_void:
         query = query.filter(status=TicketStatus.active)
@@ -47,11 +51,14 @@ async def _tickets(filters: ReportFilter) -> list[WorkTicket]:
         query = query.filter(work_month__year_month__gte=filters.year_month_start)
     if filters.year_month_end:
         query = query.filter(work_month__year_month__lte=filters.year_month_end)
-    return list(await query.select_related("work_month__production_unit"))
+    tickets = list(await query)
+    month_ids = list({ticket.work_month_id for ticket in tickets})
+    months = {month.id: month for month in await WorkMonth.filter(id__in=month_ids).select_related("production_unit")} if month_ids else {}
+    return tickets, months
 
 
 async def monthly_report(filters: ReportFilter) -> MonthReportOut:
-    tickets = await _tickets(filters)
+    tickets, months = await _tickets(filters)
     ticket_ids = [ticket.id for ticket in tickets]
     assigned: set[int] = set()
     if ticket_ids:
@@ -62,10 +69,13 @@ async def monthly_report(filters: ReportFilter) -> MonthReportOut:
             hours_by_ticket[row["assignment__ticket_id"]] += Decimal(row["hours"])
     groups: dict[tuple[str, int], list[WorkTicket]] = defaultdict(list)
     for ticket in tickets:
-        groups[(ticket.work_month.year_month, ticket.work_month.production_unit_id)].append(ticket)
+        month = months.get(ticket.work_month_id)
+        if month is not None:
+            groups[(month.year_month, month.production_unit_id)].append(ticket)
     rows: list[MonthlyTicketReportRow] = []
     for (year_month, production_unit_id), group_tickets in sorted(groups.items()):
-        unit = group_tickets[0].work_month.production_unit
+        month = months[group_tickets[0].work_month_id]
+        unit = month.production_unit
         assigned_count = sum(1 for ticket in group_tickets if ticket.id in assigned)
         timed_count = sum(1 for ticket in group_tickets if ticket.id in hours_by_ticket)
         total_hours = sum((hours_by_ticket.get(ticket.id, Decimal("0.00")) for ticket in group_tickets), Decimal("0.00"))
@@ -93,16 +103,46 @@ async def monthly_report(filters: ReportFilter) -> MonthReportOut:
     return MonthReportOut(rows=rows, totals=totals)
 
 
-def _entry_month(entry: WorkTimeEntry, basis: ReportBasis) -> str:
-    ticket_month = entry.assignment.ticket.work_month.year_month
+@dataclass(frozen=True)
+class EntryContext:
+    entry: WorkTimeEntry
+    ticket: WorkTicket
+    month: WorkMonth
+    unit: ProductionUnit | None
+    worker: Worker
+
+
+def _entry_month(context: EntryContext, basis: ReportBasis) -> str:
+    ticket_month = context.month.year_month
     if basis == ReportBasis.work_date:
-        return month_of_date(entry.work_date)
+        return month_of_date(context.entry.work_date)
     if basis == ReportBasis.accounting_month:
-        return entry.accounting_month or ticket_month
+        return context.entry.accounting_month or ticket_month
     return ticket_month
 
 
-async def _entries(filters: ReportFilter) -> list[WorkTimeEntry]:
+async def _entry_contexts(entries: list[WorkTimeEntry]) -> list[EntryContext]:
+    assignment_ids = list({entry.assignment_id for entry in entries})
+    assignments = {assignment.id: assignment for assignment in await WorkTicketAssignment.filter(id__in=assignment_ids)} if assignment_ids else {}
+    ticket_ids = list({assignment.ticket_id for assignment in assignments.values()})
+    tickets = {ticket.id: ticket for ticket in await WorkTicket.filter(id__in=ticket_ids)} if ticket_ids else {}
+    worker_ids = list({assignment.worker_id for assignment in assignments.values()})
+    workers = {worker.id: worker for worker in await Worker.filter(id__in=worker_ids)} if worker_ids else {}
+    month_ids = list({ticket.work_month_id for ticket in tickets.values()})
+    months = {month.id: month for month in await WorkMonth.filter(id__in=month_ids).select_related("production_unit")} if month_ids else {}
+    result: list[EntryContext] = []
+    for entry in entries:
+        assignment = assignments.get(entry.assignment_id)
+        ticket = tickets.get(assignment.ticket_id) if assignment is not None else None
+        worker = workers.get(assignment.worker_id) if assignment is not None else None
+        month = months.get(ticket.work_month_id) if ticket is not None else None
+        if assignment is None or ticket is None or worker is None or month is None:
+            continue
+        result.append(EntryContext(entry=entry, ticket=ticket, month=month, unit=month.production_unit, worker=worker))
+    return result
+
+
+async def _entries(filters: ReportFilter) -> list[EntryContext]:
     query = WorkTimeEntry.all()
     if filters.worker_id is not None:
         query = query.filter(assignment__worker_id=filters.worker_id)
@@ -115,24 +155,24 @@ async def _entries(filters: ReportFilter) -> list[WorkTimeEntry]:
             query = query.filter(assignment__ticket__work_month__year_month__gte=filters.year_month_start)
         if filters.year_month_end:
             query = query.filter(assignment__ticket__work_month__year_month__lte=filters.year_month_end)
-    entries = list(await query.select_related("assignment__ticket__work_month__production_unit", "assignment__worker"))
+    contexts = await _entry_contexts(list(await query))
     if filters.basis != ReportBasis.ticket_month:
-        entries = [entry for entry in entries if _in_range(_entry_month(entry, filters.basis), filters.year_month_start, filters.year_month_end)]
-    return entries
+        contexts = [context for context in contexts if _in_range(_entry_month(context, filters.basis), filters.year_month_start, filters.year_month_end)]
+    return contexts
 
 
 async def worker_hours_report(filters: ReportFilter) -> WorkerHoursReportOut:
-    entries = await _entries(filters)
+    contexts = await _entries(filters)
     meta: dict[int, tuple[str, int | None, str | None]] = {}
     tickets_by_worker: dict[int, set[int]] = defaultdict(set)
     hours_by_worker: dict[int, Decimal] = defaultdict(lambda: Decimal("0.00"))
-    for entry in entries:
-        worker = entry.assignment.worker
-        ticket = entry.assignment.ticket
-        unit = ticket.work_month.production_unit
+    for context in contexts:
+        worker = context.worker
+        ticket = context.ticket
+        unit = context.unit
         meta[worker.id] = (worker.name, unit.id if unit is not None else None, unit.name if unit is not None else None)
         tickets_by_worker[worker.id].add(ticket.id)
-        hours_by_worker[worker.id] += entry.hours
+        hours_by_worker[worker.id] += context.entry.hours
     rows = [
         WorkerHoursReportRow(
             worker_id=sqid(worker_id),
@@ -149,13 +189,13 @@ async def worker_hours_report(filters: ReportFilter) -> WorkerHoursReportOut:
 
 
 async def worker_dates_report(filters: ReportFilter) -> WorkerDatesReportOut:
-    entries = await _entries(filters)
+    contexts = await _entries(filters)
     groups: dict[tuple[date, int], Decimal] = defaultdict(lambda: Decimal("0.00"))
     names: dict[int, str] = {}
-    for entry in entries:
-        worker = entry.assignment.worker
+    for context in contexts:
+        worker = context.worker
         names[worker.id] = worker.name
-        groups[(entry.work_date, worker.id)] += entry.hours
+        groups[(context.entry.work_date, worker.id)] += context.entry.hours
     rows = [
         WorkerHoursByDateRow(work_date=work_date, worker_id=sqid(worker_id), worker_name=names[worker_id], hours=hours.quantize(Decimal("0.01")))
         for (work_date, worker_id), hours in sorted(groups.items())
@@ -164,7 +204,7 @@ async def worker_dates_report(filters: ReportFilter) -> WorkerDatesReportOut:
 
 
 async def ticket_status_report(filters: ReportFilter) -> TicketStatusReportOut:
-    tickets = await _tickets(filters)
+    tickets, _ = await _tickets(filters)
     groups: dict[tuple[TicketStatus, ReconcileStatus], int] = defaultdict(int)
     for ticket in tickets:
         groups[(ticket.status, ticket.reconcile_status)] += 1

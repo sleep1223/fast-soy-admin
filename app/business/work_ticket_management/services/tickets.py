@@ -153,15 +153,17 @@ async def list_tickets(search: TicketSearchIn) -> tuple[int, list[TicketOut]]:
             base &= Q(id__in=timed_ids or [-1])
         elif search.time_status == "none" and timed_ids:
             base &= ~Q(id__in=timed_ids)
-        query = WorkTicket.filter(base).using_db(db).select_related("work_month__production_unit")
+        query = WorkTicket.filter(base).using_db(db)
         total = await query.count()
         tickets = await query.order_by(*_ticket_order(search.order_by)).offset((search.current - 1) * search.size).limit(search.size)
+        month_ids = list({ticket.work_month_id for ticket in tickets})
+        months = {month.id: month for month in await WorkMonth.filter(id__in=month_ids).using_db(db).select_related("production_unit")} if month_ids else {}
         metrics = await ticket_metrics([ticket.id for ticket in tickets], db)
         records: list[TicketOut] = []
         for ticket in tickets:
-            month = ticket.work_month
-            unit = month.production_unit
-            if unit is not None:
+            month = months.get(ticket.work_month_id)
+            unit = month.production_unit if month is not None else None
+            if month is not None and unit is not None:
                 records.append(_ticket_out(ticket, month, unit, metrics.get(ticket.id, {})))
         return total, records
 
@@ -204,13 +206,10 @@ async def detail(ticket_id: int, db: BaseDBAsyncClient | None = None) -> TicketD
     if db is None:
         async with in_transaction(get_db_conn(WorkTicket)) as connection:
             return await detail(ticket_id, connection)
-    ticket = await WorkTicket.filter(id=ticket_id).using_db(db).select_related("work_month__production_unit").first()
+    ticket = await WorkTicket.filter(id=ticket_id).using_db(db).first()
     if ticket is None:
         raise BizError(code=Code.WORK_TICKET_NOT_FOUND, msg="工票不存在")
-    month = ticket.work_month
-    unit = month.production_unit
-    if unit is None:
-        raise BizError(code=Code.WORK_UNIT_IN_USE, msg="生产单位不存在")
+    month, unit = await get_month_unit(ticket.work_month_id, db)
     metrics = (await ticket_metrics([ticket.id], db)).get(ticket.id, {})
     assignments = await WorkTicketAssignment.filter(ticket_id=ticket.id).using_db(db).prefetch_related("worker").order_by("id")
     assignment_by_id = {assignment.id: assignment for assignment in assignments}
@@ -252,7 +251,7 @@ async def detail(ticket_id: int, db: BaseDBAsyncClient | None = None) -> TicketD
 
 
 async def _resolve_source_row(month_id: int, row_id: int, db: BaseDBAsyncClient) -> MonthlyImportRow:
-    row = await MonthlyImportRow.filter(id=row_id, batch__work_month_id=month_id, batch__status=ImportBatchStatus.active).using_db(db).select_related("batch").first()
+    row = await MonthlyImportRow.filter(id=row_id, batch__work_month_id=month_id, batch__status=ImportBatchStatus.active).using_db(db).first()
     if row is None:
         raise BizError(code=Code.WORK_IMPORT_ROW_NOT_FOUND, msg="来源导入行不存在或不属于当前月份")
     return row
@@ -650,7 +649,8 @@ async def _lookup_codes(month_id: int, codes: list[str], include_other_months: b
         if normalized in seen:
             continue
         seen.add(normalized)
-        ticket = await WorkTicket.filter(work_month_id=month.id, ticket_code_key=normalized, status=TicketStatus.active).using_db(db).select_related("work_month__production_unit").first()
+        ticket = await WorkTicket.filter(work_month_id=month.id, ticket_code_key=normalized, status=TicketStatus.active).using_db(db).first()
+        ticket_month = await WorkMonth.filter(id=ticket.work_month_id).using_db(db).first() if ticket is not None else None
         other: list[dict[str, Any]] = []
         if ticket is None and include_other_months and normalized:
             others = (
@@ -658,12 +658,12 @@ async def _lookup_codes(month_id: int, codes: list[str], include_other_months: b
                 .filter(ticket_code_key=normalized, work_month__production_unit_id=unit.id, status=TicketStatus.active)
                 .using_db(db)
                 .exclude(work_month_id=month.id)
-                .select_related("work_month")
                 .order_by("-work_month__year_month")
                 .limit(10)
+                .values("id", "ticket_code", "work_month__year_month", "status")
             )
             for item in others:
-                other.append({"ticketId": item.id, "ticketCode": item.ticket_code, "yearMonth": item.work_month.year_month, "status": item.status.value})
+                other.append({"ticketId": item["id"], "ticketCode": item["ticket_code"], "yearMonth": item["work_month__year_month"], "status": str(item["status"])})
         result.append(
             CodeLookupOut(
                 code=code,
@@ -675,8 +675,8 @@ async def _lookup_codes(month_id: int, codes: list[str], include_other_months: b
                 order_no=ticket.order_no_snapshot if ticket else None,
                 ticket_status=ticket.status if ticket else None,
                 work_month_id=sqid(ticket.work_month_id if ticket else None),
-                year_month=ticket.work_month.year_month if ticket else None,
-                work_month_status=ticket.work_month.status if ticket else None,
+                year_month=ticket_month.year_month if ticket_month is not None else None,
+                work_month_status=ticket_month.status if ticket_month is not None else None,
                 other_month_matches=other,
             )
         )

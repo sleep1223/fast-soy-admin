@@ -31,6 +31,8 @@ async def export_month_workbook(month_id: int) -> bytes:
             raise BizError(code=Code.WORK_EXPORT_TOO_LARGE, msg=f"工票单表最多导出 {MAX_EXPORT_ROWS} 行，请缩小范围")
         ticket_ids = [ticket.id for ticket in tickets]
         assignments = list(await WorkTicketAssignment.filter(ticket_id__in=ticket_ids).using_db(db).prefetch_related("worker")) if ticket_ids else []
+        assignment_by_id = {assignment.id: assignment for assignment in assignments}
+        ticket_by_id = {ticket.id: ticket for ticket in tickets}
         assignment_count: dict[int, int] = defaultdict(int)
         worker_names: dict[int, list[str]] = defaultdict(list)
         for assignment in assignments:
@@ -38,11 +40,7 @@ async def export_month_workbook(month_id: int) -> bytes:
             if assignment.worker is not None:
                 worker_names[assignment.ticket_id].append(assignment.worker.name)
         hours_by_ticket: dict[int, Decimal] = defaultdict(lambda: Decimal("0.00"))
-        entries = (
-            list(await WorkTimeEntry.filter(assignment__ticket_id__in=ticket_ids).using_db(db).select_related("assignment__ticket__work_month", "assignment__worker").order_by("work_date", "id"))
-            if ticket_ids
-            else []
-        )
+        entries = list(await WorkTimeEntry.filter(assignment__ticket_id__in=ticket_ids).using_db(db).order_by("work_date", "id")) if ticket_ids else []
         if len(entries) > MAX_EXPORT_ROWS:
             raise BizError(code=Code.WORK_EXPORT_TOO_LARGE, msg=f"工时明细最多导出 {MAX_EXPORT_ROWS} 行，请缩小范围")
         worker_tickets: dict[int, set[int]] = defaultdict(set)
@@ -51,10 +49,12 @@ async def export_month_workbook(month_id: int) -> bytes:
         worker_no_by_id: dict[int, str] = {}
         entry_rows: list[list[Any]] = []
         for entry in entries:
-            assignment = entry.assignment
-            ticket = assignment.ticket
-            worker = assignment.worker
-            ticket_month = ticket.work_month.year_month
+            assignment = assignment_by_id.get(entry.assignment_id)
+            ticket = ticket_by_id.get(assignment.ticket_id) if assignment is not None else None
+            worker = assignment.worker if assignment is not None else None
+            if assignment is None or ticket is None or worker is None:
+                continue
+            ticket_month = month.year_month
             hours_by_ticket[ticket.id] += entry.hours
             worker_tickets[worker.id].add(ticket.id)
             worker_hours[worker.id] += entry.hours

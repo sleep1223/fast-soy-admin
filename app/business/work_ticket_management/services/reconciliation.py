@@ -63,7 +63,7 @@ async def _rows(month_id: int, source_type: ImportSourceType, db: BaseDBAsyncCli
         )
         .using_db(db)
         .exclude(handling_status=HandlingStatus.ignored)
-        .select_related("order", "batch")
+        .select_related("order")
     )
 
 
@@ -106,10 +106,10 @@ async def _compute(month_id: int, db: BaseDBAsyncClient) -> dict[str, Any]:
             )
             .using_db(db)
             .exclude(work_month_id=month_id)
-            .select_related("work_month")
+            .values("ticket_code_key", "work_month__year_month")
         )
-        for ticket in others:
-            cross_month[ticket.ticket_code_key].append(ticket.work_month.year_month)
+        for item in others:
+            cross_month[item["ticket_code_key"]].append(item["work_month__year_month"])
     cross_tickets = [ticket for ticket in tickets if ticket.ticket_code_key in cross_month]
     counts = _empty_counts()
     counts[ReconcileCategory.plan_missing_actual.value] = len(plan_missing)

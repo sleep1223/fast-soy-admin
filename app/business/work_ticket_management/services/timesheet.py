@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
@@ -238,19 +239,52 @@ async def delete_entry(entry_id: int, payload: TimeEntryDeleteIn) -> None:
         await bump_ticket(ticket, db, actor)
 
 
+@dataclass(frozen=True)
+class EntryContext:
+    entry: WorkTimeEntry
+    assignment: WorkTicketAssignment
+    ticket: WorkTicket
+    worker: Worker
+    month: WorkMonth
+
+
+async def _entry_contexts(entries: list[WorkTimeEntry], db: BaseDBAsyncClient) -> dict[int, EntryContext]:
+    assignment_ids = list({entry.assignment_id for entry in entries})
+    assignments = {assignment.id: assignment for assignment in await WorkTicketAssignment.filter(id__in=assignment_ids).using_db(db)} if assignment_ids else {}
+    ticket_ids = list({assignment.ticket_id for assignment in assignments.values()})
+    tickets = {ticket.id: ticket for ticket in await WorkTicket.filter(id__in=ticket_ids).using_db(db)} if ticket_ids else {}
+    worker_ids = list({assignment.worker_id for assignment in assignments.values()})
+    workers = {worker.id: worker for worker in await Worker.filter(id__in=worker_ids).using_db(db)} if worker_ids else {}
+    month_ids = list({ticket.work_month_id for ticket in tickets.values()})
+    months = {month.id: month for month in await WorkMonth.filter(id__in=month_ids).using_db(db)} if month_ids else {}
+    result: dict[int, EntryContext] = {}
+    for entry in entries:
+        assignment = assignments.get(entry.assignment_id)
+        ticket = tickets.get(assignment.ticket_id) if assignment is not None else None
+        worker = workers.get(assignment.worker_id) if assignment is not None else None
+        month = months.get(ticket.work_month_id) if ticket is not None else None
+        if assignment is None or ticket is None or worker is None or month is None:
+            continue
+        result[entry.id] = EntryContext(entry=entry, assignment=assignment, ticket=ticket, worker=worker, month=month)
+    return result
+
+
 async def _entry_out(entry_id: int) -> TimeEntryOut:
     async with in_transaction(get_db_conn(WorkTimeEntry)) as db:
-        entry = await WorkTimeEntry.filter(id=entry_id).using_db(db).select_related("assignment__ticket__work_month", "assignment__worker").first()
+        entry = await WorkTimeEntry.filter(id=entry_id).using_db(db).first()
         if entry is None:
             raise BizError(code=Code.NOT_FOUND, msg="工时记录不存在")
-        return _entry_row(entry)
+        context = (await _entry_contexts([entry], db)).get(entry.id)
+        if context is None:
+            raise BizError(code=Code.NOT_FOUND, msg="工时记录的工票或人员不存在")
+        return _entry_row(context)
 
 
-def _entry_row(entry: WorkTimeEntry) -> TimeEntryOut:
-    assignment = entry.assignment
-    ticket = assignment.ticket
-    worker = assignment.worker
-    month = ticket.work_month
+def _entry_row(context: EntryContext) -> TimeEntryOut:
+    entry = context.entry
+    ticket = context.ticket
+    worker = context.worker
+    month = context.month
     return TimeEntryOut(
         id=sqid(entry.id),
         ticket_id=sqid(ticket.id),
@@ -286,7 +320,6 @@ async def list_entries(search: TimeEntrySearchIn) -> tuple[int, list[TimeEntryOu
         if search.accounting_month:
             query = query.filter(Q(accounting_month=search.accounting_month) | Q(accounting_month__isnull=True, assignment__ticket__work_month__year_month=search.accounting_month))
         total = await query.using_db(db).count()
-        entries = (
-            await query.using_db(db).select_related("assignment__ticket__work_month", "assignment__worker").order_by("-work_date", "-id").offset((search.current - 1) * search.size).limit(search.size)
-        )
-        return total, [_entry_row(entry) for entry in entries]
+        entries = await query.using_db(db).order_by("-work_date", "-id").offset((search.current - 1) * search.size).limit(search.size)
+        contexts = await _entry_contexts(list(entries), db)
+        return total, [_entry_row(contexts[entry.id]) for entry in entries if entry.id in contexts]

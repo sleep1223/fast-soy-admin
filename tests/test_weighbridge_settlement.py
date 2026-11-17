@@ -308,14 +308,17 @@ async def ticket_export_client(settlement_db: SettlementRate) -> AsyncIterator[A
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_ticket_export_includes_snapshot_lines_and_ticket_numbers(settlement_db: SettlementRate, ticket_export_client: AsyncClient) -> None:
-    order = await Order.create(order_no="000123", part_no="000456", name="=1+1", net_weight="1.123456", gross_weight="2.654321", quantity=999)
+    order = await Order.create(order_no="000123", part_no="000456-A-01", name="=1+1", net_weight="1.123456", gross_weight="2.654321", quantity=999)
     data = payload(settlement_db)
+    data["lines"][1]["partNo"] = "MANUAL002"
     data["lines"].insert(0, dict(orderId=encode_id(order.id), quantity=2))
     first = await services.save_ticket(WeighingTicketCreate.model_validate(data))
+    await SettlementRate.filter(id=settlement_db.id).update(process_name="喷砂", price=Decimal("3.7500"))
     data["ticketNo"] = "T-002"
+    data["weight"] = "123.456"
     data["lines"] = [dict(orderId=encode_id(order.id), quantity=3)]
     second = await services.save_ticket(WeighingTicketCreate.model_validate(data))
-    await Order.filter(id=order.id).update(name="已修改", gross_weight="99")
+    await Order.filter(id=order.id).update(part_no="NEW-001", name="已修改", gross_weight="99")
     response = await ticket_export_client.post("/weighing_tickets/export", json={"current": 2, "size": 1, "orderBy": ["-id"]})
     assert response.json()["code"] == "0000"
     exported = response.json()["data"]
@@ -327,18 +330,24 @@ async def test_ticket_export_includes_snapshot_lines_and_ticket_numbers(settleme
         assert [row[0] for row in headers[1:]] == ["T-002", "T-001"]
         assert headers[1][-1] == encode_id(settlement_db.id)
         rows = list(workbook["订单明细"].values)
-        assert rows[0] == ("磅单编号", "明细顺序", "订单号", "项目号", "名称", "净重", "毛重", "实际过磅数量", "机内合重/kg", "分摊过磅重量/kg", "含税结算金额/元", "含税单价（元/件）")
+        assert rows[0] == (
+            "磅单编号", "明细顺序", "订单号", "项目号", "名称", "净重", "毛重", "实际过磅数量",
+            "机内合重/kg", "分摊过磅重量/kg", "含税结算金额/元", "含税单价（元/件）",
+            "磅单总重量/kg", "工序名称", "工序价格（元/kg）", "合同号",
+        )
         expected = [(second, line) for line in second["lines"]] + [(first, line) for line in first["lines"]]
         assert len(rows) - 1 == len(expected)
         for row, (ticket, line) in zip(rows[1:], expected, strict=True):
-            assert row == (
+            assert row[:12] == (
                 ticket["ticketNo"], line["position"], line["orderNo"], line["partNo"], line["name"],
                 line["netWeight"], line["grossWeight"], line["quantity"], line["theoreticalWeight"],
                 line["allocatedWeight"], line["amount"], line["taxUnitPrice"],
             )
+            assert (Decimal(row[12]), row[13], Decimal(row[14])) == (Decimal(ticket["weight"]), ticket["process"], Decimal(ticket["price"]))
+        assert [row[15] for row in rows[1:]] == ["000456", "000456", "manual", "MANUAL002"]
         assert workbook["订单明细"]["E2"].value == "=1+1"
         assert workbook["订单明细"]["E2"].data_type == "s"
-        assert rows[1][2:4] == ("000123", "000456")
+        assert rows[1][2:4] == ("000123", "000456-A-01")
         assert rows[-1][2] is None  # Manual entries are exported with their ticket as well.
     finally:
         workbook.close()

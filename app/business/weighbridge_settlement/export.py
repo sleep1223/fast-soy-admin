@@ -31,16 +31,22 @@ LINE_COLUMNS = (
     ("amount", "含税结算金额/元"),
     ("tax_unit_price", "含税单价（元/件）"),
 )
+DETAIL_TICKET_COLUMNS = (
+    ("weight", "磅单总重量/kg"),
+    ("process", "工序名称"),
+    ("price", "工序价格（元/kg）"),
+)
 
 
 def _write_workbook(ticket_rows: list[list[Any]], line_rows: list[list[Any]]) -> bytes:
     headers, _ = TICKET_EXCEL.resolve(WeighingTicketOut)
+    detail_headers = ["磅单编号", *[title for _, title in LINE_COLUMNS + DETAIL_TICKET_COLUMNS], "合同号"]
     workbook = Workbook(write_only=True)
     try:
         # Preserve the existing main sheet and append the matching detail sheet.
         for title, rows in (
             ("Data", [headers, *ticket_rows]),
-            ("订单明细", [["磅单编号", *[title for _, title in LINE_COLUMNS]], *line_rows]),
+            ("订单明细", [detail_headers, *line_rows]),
         ):
             sheet = workbook.create_sheet(title)
             for row in rows:
@@ -86,6 +92,7 @@ async def export_tickets(search: Q, order: list[str]) -> bytes:
             values = {name: getattr(ticket, name) for name in TICKET_EXCEL.fields}
             record = WeighingTicketOut.model_construct(**values).model_dump(mode="json", include=set(TICKET_EXCEL.fields))
             ticket_rows.append([record[name] for name in TICKET_EXCEL.fields])
+            detail_ticket_values = [record[name] for name, _ in DETAIL_TICKET_COLUMNS]
             for line in grouped[ticket.id]:
                 row: list[Any] = [ticket.ticket_no]
                 for name, _ in LINE_COLUMNS:
@@ -94,6 +101,7 @@ async def export_tickets(search: Q, order: list[str]) -> bytes:
                         places = getattr(WeighingLine._meta.fields_map[name], "decimal_places")
                         value = format(value, f".{places}f")
                     row.append(value)
-                line_rows.append(row)
+                contract_no = line.part_no.partition("-")[0]
+                line_rows.append([*row, *detail_ticket_values, contract_no])
     # XLSX compression must not block the event loop or hold database locks.
     return await to_thread(_write_workbook, ticket_rows, line_rows)

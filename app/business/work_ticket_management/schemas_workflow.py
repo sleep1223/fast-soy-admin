@@ -54,7 +54,7 @@ class OrderCandidateQuery(SchemaBase):
     model_config = ConfigDict(extra="forbid")
     work_month_id: SqidId
     part_no: PartNoText
-    limit: int = Field(20, ge=1, le=50)
+    limit: int = Field(20, ge=1, le=1000)
     include_other_units: bool = False
     include_partial: bool = False
 

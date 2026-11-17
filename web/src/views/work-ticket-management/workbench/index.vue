@@ -5,6 +5,7 @@ import type { DataTableColumns, UploadCustomRequestOptions } from 'naive-ui';
 import { NButton, NTag } from 'naive-ui';
 import OcrRecognizer from '@/components/advanced/ocr-recognizer.vue';
 import {
+  fetchAssignTicket,
   fetchCreateTicket,
   fetchImportCommit,
   fetchImportPreview,
@@ -12,14 +13,16 @@ import {
   fetchOpenWorkMonth,
   fetchOrderCandidates,
   fetchProductionUnitOptions,
-  fetchTimeBatchSave,
   fetchTickets,
   fetchWorkerOptions
 } from '@/service/api';
+import { $t } from '@/locales';
+import { useAppStore } from '@/store/modules/app';
 import MonthUnitToolbar from '../shared/month-unit-toolbar.vue';
 
 defineOptions({ name: 'WorkTicketWorkbench' });
 
+const appStore = useAppStore();
 const month = ref(dayjs().format('YYYY-MM'));
 const units = ref<Api.WorkTicketManagement.UnitOption[]>([]);
 const unitId = ref<string | null>(null);
@@ -34,6 +37,8 @@ const candidates = ref<Api.WorkTicketManagement.OrderCandidate[]>([]);
 const tickets = ref<Api.WorkTicketManagement.Ticket[]>([]);
 const workers = ref<Api.WorkTicketManagement.WorkerOption[]>([]);
 const onlyUnassigned = ref(false);
+let selectionRequest = 0;
+let monthRequest = 0;
 
 async function loadUnits() {
   const { data } = await fetchProductionUnitOptions();
@@ -42,9 +47,21 @@ async function loadUnits() {
 }
 
 async function openMonth() {
-  if (!unitId.value) return;
+  const currentRequest = ++monthRequest;
+  selectionRequest += 1;
+  selectedRow.value = null;
+  candidates.value = [];
+  tickets.value = [];
+  workMonthId.value = null;
+  rows.value = [];
+  total.value = 0;
+  if (!unitId.value) {
+    loading.value = false;
+    return;
+  }
   loading.value = true;
   const { data, error } = await fetchOpenWorkMonth({ yearMonth: month.value, productionUnitId: unitId.value });
+  if (currentRequest !== monthRequest) return;
   loading.value = false;
   if (error || !data) return;
   workMonthId.value = data.id;
@@ -80,6 +97,7 @@ async function loadWorkers() {
 }
 
 async function selectProject(row: Api.WorkTicketManagement.ImportRow) {
+  const currentRequest = ++selectionRequest;
   selectedRow.value = row;
   candidates.value = [];
   tickets.value = [];
@@ -89,56 +107,77 @@ async function selectProject(row: Api.WorkTicketManagement.ImportRow) {
     fetchOrderCandidates({
       workMonthId: workMonthId.value,
       partNo: row.normalizedPartNo || row.rawPartNo,
-      limit: 100,
+      limit: 1000,
       includeOtherUnits: true,
       includePartial: false
     }),
     fetchTickets({ workMonthId: workMonthId.value, current: 1, size: 1000 })
   ]);
+  if (currentRequest !== selectionRequest) return;
   loading.value = false;
+  if (ordersResult.error || ticketsResult.error) {
+    window.$message?.error($t('page.work_ticket_management.workflow.loadFailed'));
+    return;
+  }
   candidates.value = ordersResult.data ?? [];
   const orderIds = new Set(candidates.value.map(order => order.id));
   tickets.value = (ticketsResult.data?.records ?? []).filter(ticket => orderIds.has(ticket.orderId ?? ''));
 }
 
+const matchStatusLabels: Record<Api.WorkTicketManagement.MatchStatus, string> = {
+  pending: $t('page.work_ticket_management.workflow.pending'),
+  matched: $t('page.work_ticket_management.workflow.matched'),
+  ambiguous: $t('page.work_ticket_management.workflow.ambiguous'),
+  missing: $t('page.work_ticket_management.workflow.missing'),
+  unassigned: $t('page.work_ticket_management.workflow.unassigned'),
+  other_unit: $t('page.work_ticket_management.workflow.otherUnit'),
+  invalid: $t('page.work_ticket_management.workflow.invalid')
+};
+const mappingStatusLabels: Record<Api.WorkTicketManagement.OrderCandidate['mappingStatus'], string> = {
+  confirmed: $t('page.work_ticket_management.workflow.mappingConfirmed'),
+  other_unit: $t('page.work_ticket_management.workflow.mappingOther'),
+  unconfirmed: $t('page.work_ticket_management.workflow.mappingUnconfirmed')
+};
+
 const columns: DataTableColumns<Api.WorkTicketManagement.ImportRow> = [
-  { title: '项目号', key: 'normalizedPartNo', minWidth: 180 },
+  { title: $t('page.work_ticket_management.workflow.partNo'), key: 'normalizedPartNo', minWidth: 180 },
   {
-    title: '来源',
+    title: $t('page.work_ticket_management.workflow.source'),
     key: 'sourceType',
     width: 100,
-    render: row => (row.sourceType === 'actual' ? '补录' : '初始清单')
+    render: row =>
+      $t(
+        row.sourceType === 'plan'
+          ? 'page.work_ticket_management.workflow.plan'
+          : 'page.work_ticket_management.workflow.actual'
+      )
   },
   {
-    title: '订单匹配',
+    title: $t('page.work_ticket_management.workflow.status'),
     key: 'matchStatus',
     width: 120,
     render: row =>
       h(
         NTag,
-        { type: row.matchStatus === 'matched' ? 'success' : 'warning', bordered: false },
         {
-          default: () =>
-            row.matchStatus === 'matched'
-              ? '已匹配'
-              : row.matchStatus === 'ambiguous'
-                ? '多个订单'
-                : row.matchStatus === 'missing'
-                  ? '无订单'
-                  : row.matchStatus
+          type: row.matchStatus === 'matched' ? 'success' : row.matchStatus === 'ambiguous' ? 'warning' : 'default',
+          bordered: false,
+          size: 'small'
+        },
+        {
+          default: () => matchStatusLabels[row.matchStatus]
         }
       )
   },
-  { title: '订单号', key: 'orderNo', minWidth: 140, render: row => row.orderNo || '点击查看订单' },
   {
-    title: '操作',
+    title: $t('page.work_ticket_management.workflow.actions'),
     key: 'actions',
-    width: 110,
+    width: 140,
     render: row =>
       h(
         NButton,
-        { size: 'small', type: 'primary', secondary: true, onClick: () => void selectProject(row) },
-        { default: () => '查看订单' }
+        { size: 'small', type: 'primary', ghost: true, onClick: () => void selectProject(row) },
+        { default: () => $t('page.work_ticket_management.workflow.candidateOrders') }
       )
   }
 ];
@@ -173,7 +212,12 @@ async function commitImport() {
   importBusy.value = false;
   if (error || !data) return;
   importVisible.value = false;
-  window.$message?.success(`新增 ${data.rowCount} 个项目号，跳过重复 ${data.duplicateRows} 个`);
+  window.$message?.success(
+    $t('page.work_ticket_management.workflow.importCompleted', {
+      count: data.rowCount,
+      duplicates: data.duplicateRows
+    })
+  );
   page.current = 1;
   await loadRows();
 }
@@ -183,18 +227,12 @@ const ticketSaving = ref(false);
 const selectedOrder = ref<Api.WorkTicketManagement.OrderCandidate | null>(null);
 const ticketForm = reactive({
   code: '',
-  workerId: null as string | null,
-  workDate: dayjs().format('YYYY-MM-DD'),
-  hours: null as number | null,
   codeSource: 'manual'
 });
 function openTicket(order: Api.WorkTicketManagement.OrderCandidate) {
   selectedOrder.value = order;
   Object.assign(ticketForm, {
     code: '',
-    workerId: null,
-    workDate: dayjs().format('YYYY-MM-DD'),
-    hours: null,
     codeSource: 'manual'
   });
   ticketVisible.value = true;
@@ -202,9 +240,9 @@ function openTicket(order: Api.WorkTicketManagement.OrderCandidate) {
 async function copyOrderNo(orderNo: string) {
   try {
     await navigator.clipboard.writeText(orderNo);
-    window.$message?.success('订单号已复制');
+    window.$message?.success($t('page.work_ticket_management.workflow.orderCodeCopied'));
   } catch {
-    window.$message?.error('复制失败，请手动选择订单号');
+    window.$message?.error($t('page.work_ticket_management.workflow.copyFailed'));
   }
 }
 function onOcrRecognized(result: Api.Ocr.Result) {
@@ -214,11 +252,7 @@ function onOcrRecognized(result: Api.Ocr.Result) {
 async function saveTicket() {
   if (!workMonthId.value || !selectedRow.value || !selectedOrder.value) return;
   if (!ticketForm.code.trim()) {
-    window.$message?.warning('请先录入工票码');
-    return;
-  }
-  if (ticketForm.hours !== null && (!ticketForm.workerId || !ticketForm.workDate)) {
-    window.$message?.warning('登记工时需要选择人员和工作日期');
+    window.$message?.warning($t('page.work_ticket_management.workflow.ticketCodeRequired'));
     return;
   }
   ticketSaving.value = true;
@@ -230,56 +264,94 @@ async function saveTicket() {
     nameSnapshot: selectedOrder.value.name,
     ticketCode: ticketForm.code.trim() || null,
     codeSource: ticketForm.codeSource,
-    workerIds: ticketForm.workerId ? [ticketForm.workerId] : [],
     allowAddMapping: true
   });
   if (error || !ticket) {
     ticketSaving.value = false;
     return;
   }
-  if (ticketForm.hours !== null && ticketForm.workerId) {
-    const { error: timeError } = await fetchTimeBatchSave({
-      workMonthId: workMonthId.value,
-      entries: [
-        {
-          ticketId: ticket.id,
-          workerId: ticketForm.workerId,
-          workDate: ticketForm.workDate,
-          hours: String(ticketForm.hours),
-          revision: ticket.revision
-        }
-      ]
-    });
-    if (timeError) {
-      ticketSaving.value = false;
-      ticketVisible.value = false;
-      await selectProject(selectedRow.value);
-      window.$message?.error('工票已保存，但工时没有保存；请在工时登记中补录');
-      return;
-    }
-  }
   ticketSaving.value = false;
   ticketVisible.value = false;
   await selectProject(selectedRow.value);
-  window.$message?.success('工票记录已保存');
+  window.$message?.success($t('page.work_ticket_management.workflow.saveSuccess'));
+}
+
+const assignmentVisible = ref(false);
+const assignmentSaving = ref(false);
+const assigningTicket = ref<Api.WorkTicketManagement.Ticket | null>(null);
+const assignmentWorkerIds = ref<string[]>([]);
+function openAssignment(ticket: Api.WorkTicketManagement.Ticket) {
+  assigningTicket.value = ticket;
+  assignmentWorkerIds.value = [];
+  assignmentVisible.value = true;
+}
+async function saveAssignment() {
+  if (!assigningTicket.value || !assignmentWorkerIds.value.length) return;
+  assignmentSaving.value = true;
+  const { error } = await fetchAssignTicket(
+    assigningTicket.value.id,
+    assigningTicket.value.revision,
+    assignmentWorkerIds.value
+  );
+  assignmentSaving.value = false;
+  if (error) return;
+  assignmentVisible.value = false;
+  if (selectedRow.value) await selectProject(selectedRow.value);
+  window.$message?.success($t('page.work_ticket_management.workflow.saveSuccess'));
 }
 
 const visibleTickets = computed(() =>
   onlyUnassigned.value ? tickets.value.filter(ticket => ticket.assignmentCount === 0) : tickets.value
 );
+function ticketsForOrder(orderId: string) {
+  return visibleTickets.value.filter(ticket => ticket.orderId === orderId);
+}
 const ticketColumns: DataTableColumns<Api.WorkTicketManagement.Ticket> = [
-  { title: '工票码', key: 'ticketCode', render: ticket => ticket.ticketCode || '未填写' },
-  { title: '人员', key: 'workerNames', render: ticket => ticket.workerNames.join('、') || '未分配' },
-  { title: '工时', key: 'totalHours', render: ticket => `${ticket.totalHours} 小时` }
+  {
+    title: $t('page.work_ticket_management.workflow.ticketCode'),
+    key: 'ticketCode',
+    render: ticket => ticket.ticketCode || '—'
+  },
+  {
+    title: $t('page.work_ticket_management.workflow.assignment'),
+    key: 'workerNames',
+    render: ticket => ticket.workerNames.join('、') || $t('page.work_ticket_management.workflow.unassigned')
+  },
+  {
+    title: $t('page.work_ticket_management.workflow.totalHours'),
+    key: 'totalHours',
+    render: ticket => `${ticket.totalHours} ${$t('page.work_ticket_management.workflow.hours')}`
+  },
+  {
+    title: $t('page.work_ticket_management.workflow.actions'),
+    key: 'actions',
+    width: 140,
+    render: ticket =>
+      h(
+        NButton,
+        {
+          size: 'small',
+          type: 'primary',
+          ghost: true,
+          disabled: ticket.status !== 'active',
+          onClick: () => openAssignment(ticket)
+        },
+        { default: () => $t('page.work_ticket_management.workflow.assignWorkers') }
+      )
+  }
 ];
 const previewColumns: DataTableColumns<Api.WorkTicketManagement.ImportPreviewRow> = [
-  { title: '项目号', key: 'rawPartNo' },
+  { title: $t('page.work_ticket_management.workflow.partNo'), key: 'rawPartNo' },
   {
-    title: '订单号',
+    title: $t('page.work_ticket_management.workflow.orderNo'),
     key: 'orderNo',
-    render: row => row.orderNo || (row.duplicateOfRowId ? '重复，提交时跳过' : '未匹配')
+    render: row =>
+      row.orderNo ||
+      (row.duplicateOfRowId
+        ? $t('page.work_ticket_management.workflow.duplicate')
+        : $t('page.work_ticket_management.workflow.unmatched'))
   },
-  { title: '备注', key: 'note' }
+  { title: $t('page.work_ticket_management.workflow.remark'), key: 'note' }
 ];
 
 onMounted(async () => {
@@ -291,29 +363,39 @@ watch([month, unitId], () => void openMonth());
 <template>
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
     <MonthUnitToolbar v-model:month="month" v-model:unit-id="unitId" :units="units" :loading="loading">
-      <NButton size="small" type="primary" :disabled="!workMonthId" @click="openImport('plan')">导入当月件号</NButton>
-      <NButton size="small" :disabled="!workMonthId" @click="openImport('actual')">补录遗漏件号</NButton>
+      <NButton size="small" type="primary" :disabled="!workMonthId" @click="openImport('plan')">
+        {{ $t('page.work_ticket_management.workflow.importPlan') }}
+      </NButton>
+      <NButton size="small" :disabled="!workMonthId" @click="openImport('actual')">
+        {{ $t('page.work_ticket_management.workflow.importActual') }}
+      </NButton>
     </MonthUnitToolbar>
 
-    <NGrid cols="1 900:2" :x-gap="16" :y-gap="16" responsive="screen">
+    <NGrid cols="1 900:2" :x-gap="16" :y-gap="16" responsive="screen" class="sm:flex-1-hidden">
       <NGi>
-        <NCard title="当月项目号" :bordered="false" size="small" class="card-wrapper">
+        <NCard
+          :title="$t('page.work_ticket_management.workflow.importRows')"
+          :bordered="false"
+          size="small"
+          class="card-wrapper sm:flex-1-hidden"
+        >
           <template #header-extra>
-            <NSpace>
+            <NSpace align="center" wrap>
               <NInput
                 v-model:value="keyword"
                 clearable
-                placeholder="搜索项目号"
+                :placeholder="$t('page.work_ticket_management.workflow.searchProjectNumbers')"
                 class="w-180px"
                 @keyup.enter="loadRows"
               />
-              <NButton size="small" @click="loadRows">搜索</NButton>
+              <NButton size="small" @click="loadRows">{{ $t('page.work_ticket_management.workflow.search') }}</NButton>
             </NSpace>
           </template>
           <NDataTable
             :columns="columns"
             :data="rows"
             :loading="loading"
+            :flex-height="!appStore.isMobile"
             :row-key="row => row.id"
             :row-props="row => ({ onDblclick: () => selectProject(row) })"
             :scroll-x="600"
@@ -332,60 +414,102 @@ watch([month, unitId], () => void openMonth());
               }
             }"
             size="small"
+            class="sm:h-full"
           />
-          <div class="mt-8px text-12px text-gray">补录时项目号已存在会自动跳过。双击项目号也可查看订单。</div>
+          <div class="mt-8px text-12px text-gray">
+            {{ $t('page.work_ticket_management.workflow.importProjectHint') }}
+          </div>
         </NCard>
       </NGi>
 
       <NGi>
         <NCard
-          :title="selectedRow ? `项目号：${selectedRow.normalizedPartNo}` : '订单与工票'"
+          :title="
+            selectedRow
+              ? `${$t('page.work_ticket_management.workflow.partNo')}：${selectedRow.normalizedPartNo}`
+              : $t('page.work_ticket_management.workflow.candidateOrders')
+          "
           :bordered="false"
           size="small"
-          class="card-wrapper"
+          class="card-wrapper sm:flex-1-hidden"
         >
-          <NEmpty v-if="!selectedRow" description="选择左侧项目号，查看对应订单" />
+          <NEmpty v-if="!selectedRow" :description="$t('page.work_ticket_management.workflow.selectRowHint')" />
           <template v-else>
-            <div class="mb-12px flex items-center justify-between">
-              <span>匹配到 {{ candidates.length }} 个订单</span>
+            <div class="mb-12px flex flex-wrap items-center justify-between gap-8px">
+              <div class="text-13px text-gray">
+                {{ $t('page.work_ticket_management.workflow.orderCount', { count: candidates.length }) }}
+              </div>
               <NSwitch v-model:value="onlyUnassigned">
-                <template #checked>只看未分配</template>
-                <template #unchecked>显示全部工票</template>
+                <template #checked>{{ $t('page.work_ticket_management.workflow.onlyUnassigned') }}</template>
+                <template #unchecked>{{ $t('page.work_ticket_management.workflow.showAllTickets') }}</template>
               </NSwitch>
             </div>
-            <NEmpty v-if="!candidates.length" description="订单系统中没有找到相同项目号" />
-            <div
-              v-for="order in candidates"
-              :key="order.id"
-              class="mb-12px rounded border border-solid border-gray-200 p-12px"
-            >
-              <div class="flex items-start justify-between gap-8px">
-                <div>
-                  <div class="font-600">订单号：{{ order.orderNo }}</div>
-                  <div class="mt-4px text-13px">{{ order.partNo }} · {{ order.name }}</div>
-                  <div class="mt-4px text-12px text-gray">
-                    数量 {{ order.quantity ?? '—' }} · 已入库 {{ order.receivedQuantity ?? '—' }}
+            <div class="max-h-full overflow-y-auto pr-4px">
+              <NEmpty
+                v-if="!candidates.length"
+                :description="$t('page.work_ticket_management.workflow.noCandidates')"
+              />
+              <NCard v-for="order in candidates" :key="order.id" :bordered="true" size="small" class="mb-12px">
+                <template #header>
+                  <div class="flex flex-wrap items-center gap-8px">
+                    <span class="text-15px font-600">{{ order.orderNo }}</span>
+                    <NTag
+                      size="small"
+                      :bordered="false"
+                      :type="order.mappingStatus === 'confirmed' ? 'success' : 'warning'"
+                    >
+                      {{ mappingStatusLabels[order.mappingStatus] }}
+                    </NTag>
+                  </div>
+                </template>
+                <div class="grid grid-cols-1 gap-x-20px gap-y-6px text-13px sm:grid-cols-2">
+                  <div>
+                    <span class="text-gray">{{ $t('page.work_ticket_management.workflow.partNo') }}：</span>
+                    {{ order.partNo }}
+                  </div>
+                  <div>
+                    <span class="text-gray">{{ $t('page.work_ticket_management.workflow.name') }}：</span>
+                    {{ order.name }}
+                  </div>
+                  <div>
+                    <span class="text-gray">{{ $t('page.work_ticket_management.workflow.quantity') }}：</span>
+                    {{ order.quantity ?? '—' }}
+                  </div>
+                  <div>
+                    <span class="text-gray">{{ $t('page.work_ticket_management.workflow.receivedQuantity') }}：</span>
+                    {{ order.receivedQuantity ?? '—' }}
                   </div>
                 </div>
-                <NSpace>
-                  <NButton size="small" @click="copyOrderNo(order.orderNo)">复制订单号</NButton>
-                  <NButton size="small" type="primary" @click="openTicket(order)">录入工票 / 工时</NButton>
-                </NSpace>
-              </div>
-              <NDivider />
-              <NEmpty
-                v-if="!visibleTickets.filter(ticket => ticket.orderId === order.id).length"
-                description="还没有工票记录"
-                size="small"
-              />
-              <NDataTable
-                v-else
-                :columns="ticketColumns"
-                :data="visibleTickets.filter(ticket => ticket.orderId === order.id)"
-                :row-key="ticket => ticket.id"
-                size="small"
-                :scroll-x="700"
-              />
+                <div class="mt-12px flex flex-wrap justify-end gap-8px">
+                  <NButton size="small" secondary @click="copyOrderNo(order.orderNo)">
+                    {{ $t('page.work_ticket_management.workflow.copyOrderNo') }}
+                  </NButton>
+                  <NButton size="small" type="primary" @click="openTicket(order)">
+                    {{ $t('page.work_ticket_management.workflow.enterTicketCode') }}
+                  </NButton>
+                </div>
+                <NDivider class="my-12px" />
+                <div class="mb-8px text-13px font-600">{{ $t('page.work_ticket_management.workflow.ticket') }}</div>
+                <NEmpty
+                  v-if="!ticketsForOrder(order.id).length"
+                  :description="
+                    $t(
+                      onlyUnassigned
+                        ? 'page.work_ticket_management.workflow.noUnassignedTicket'
+                        : 'page.work_ticket_management.workflow.noTicket'
+                    )
+                  "
+                  size="small"
+                />
+                <NDataTable
+                  v-else
+                  :columns="ticketColumns"
+                  :data="ticketsForOrder(order.id)"
+                  :row-key="ticket => ticket.id"
+                  size="small"
+                  :scroll-x="700"
+                />
+              </NCard>
             </div>
           </template>
         </NCard>
@@ -395,66 +519,129 @@ watch([month, unitId], () => void openMonth());
     <NModal
       v-model:show="importVisible"
       preset="card"
-      :title="importSource === 'plan' ? '导入当月件号' : '补录遗漏件号'"
+      :title="
+        $t(
+          importSource === 'plan'
+            ? 'page.work_ticket_management.workflow.importPlan'
+            : 'page.work_ticket_management.workflow.importActual'
+        )
+      "
       class="w-760px max-w-95vw"
     >
       <NSpace vertical>
-        <div>选择 Excel 文件，只需要包含一列项目号。补录文件中已存在的项目号会跳过。</div>
+        <NAlert type="info" :show-icon="false">
+          {{ $t('page.work_ticket_management.workflow.importProjectHint') }}
+        </NAlert>
         <NUpload accept=".xlsx" :max="1" :custom-request="previewFile" :show-file-list="true">
-          <NButton :loading="importBusy">选择 .xlsx 文件并预览</NButton>
+          <NButton :loading="importBusy">{{ $t('page.work_ticket_management.workflow.chooseExcel') }}</NButton>
         </NUpload>
         <template v-if="importPreview">
           <NAlert type="info" :show-icon="false">
-            共 {{ importPreview.totalRows }} 行；新增候选
-            {{ importPreview.totalRows - importPreview.duplicateRows - importPreview.invalidRows }}，重复跳过
-            {{ importPreview.duplicateRows }}，无效 {{ importPreview.invalidRows }}。
+            {{
+              $t('page.work_ticket_management.workflow.importPreviewSummary', {
+                total: importPreview.totalRows,
+                added: importPreview.totalRows - importPreview.duplicateRows - importPreview.invalidRows,
+                duplicates: importPreview.duplicateRows,
+                invalid: importPreview.invalidRows
+              })
+            }}
           </NAlert>
-          <NDataTable :columns="previewColumns" :data="importPreview.rows" :max-height="320" size="small" />
-          <NButton type="primary" :loading="importBusy" @click="commitImport">确认导入</NButton>
+          <NDataTable
+            :columns="previewColumns"
+            :data="importPreview.rows"
+            :max-height="320"
+            :scroll-x="600"
+            size="small"
+          />
+          <div class="flex justify-end">
+            <NButton type="primary" :loading="importBusy" @click="commitImport">
+              {{ $t('page.work_ticket_management.workflow.importConfirm') }}
+            </NButton>
+          </div>
         </template>
       </NSpace>
     </NModal>
 
-    <NModal v-model:show="ticketVisible" preset="card" title="录入工票与工时" class="w-560px max-w-95vw">
-      <NForm label-placement="top">
-        <NFormItem label="订单号"><NInput :value="selectedOrder?.orderNo" readonly /></NFormItem>
-        <NFormItem label="工票码" required>
-          <NInput v-model:value="ticketForm.code" placeholder="粘贴工票码" />
-        </NFormItem>
-        <NFormItem label="工票照片识别"><OcrRecognizer @recognized="onOcrRecognized" /></NFormItem>
-        <NFormItem label="人员">
-          <NSelect
-            v-model:value="ticketForm.workerId"
-            :options="workers.map(worker => ({ label: worker.name, value: worker.id }))"
-            clearable
-            filterable
-            placeholder="暂不分配可留空"
-          />
-        </NFormItem>
-        <NFormItem label="工作日期">
-          <NDatePicker
-            v-model:formatted-value="ticketForm.workDate"
-            type="date"
-            value-format="yyyy-MM-dd"
-            class="w-full"
-          />
-        </NFormItem>
-        <NFormItem label="工时（小时）">
-          <NInputNumber
-            v-model:value="ticketForm.hours"
-            :min="0.01"
-            :max="24"
-            :precision="2"
-            clearable
-            class="w-full"
-            placeholder="可稍后登记"
-          />
-        </NFormItem>
-      </NForm>
+    <NModal
+      v-model:show="ticketVisible"
+      preset="card"
+      :title="$t('page.work_ticket_management.workflow.enterTicketCode')"
+      class="w-560px max-w-95vw"
+    >
+      <NSpace vertical :size="16">
+        <NAlert type="info" :show-icon="false">
+          {{ $t('page.work_ticket_management.workflow.externalTicketCodeHint') }}
+        </NAlert>
+        <NForm label-placement="top">
+          <NFormItem :label="$t('page.work_ticket_management.workflow.orderNo')">
+            <NSpace class="w-full" align="center" :wrap="false">
+              <NInput :value="selectedOrder?.orderNo" readonly class="flex-1" />
+              <NButton secondary @click="selectedOrder && copyOrderNo(selectedOrder.orderNo)">
+                {{ $t('page.work_ticket_management.workflow.copyOrderNo') }}
+              </NButton>
+            </NSpace>
+          </NFormItem>
+          <NFormItem :label="$t('page.work_ticket_management.workflow.ticketCode')" required>
+            <NInput
+              v-model:value="ticketForm.code"
+              :placeholder="$t('page.work_ticket_management.workflow.pasteTicketCode')"
+            />
+          </NFormItem>
+          <NFormItem :label="$t('page.work_ticket_management.workflow.ocr')">
+            <OcrRecognizer @recognized="onOcrRecognized" />
+          </NFormItem>
+        </NForm>
+      </NSpace>
       <template #footer>
         <NSpace justify="end">
-          <NButton @click="ticketVisible = false">取消</NButton>
-          <NButton type="primary" :loading="ticketSaving" @click="saveTicket">保存</NButton>
+          <NButton @click="ticketVisible = false">{{ $t('page.work_ticket_management.workflow.cancel') }}</NButton>
+          <NButton type="primary" :loading="ticketSaving" @click="saveTicket">
+            {{ $t('page.work_ticket_management.workflow.save') }}
+          </NButton>
+        </NSpace>
+      </template>
+    </NModal>
+
+    <NModal
+      v-model:show="assignmentVisible"
+      preset="card"
+      :title="$t('page.work_ticket_management.workflow.assignWorkers')"
+      class="w-560px max-w-95vw"
+    >
+      <NSpace vertical :size="16">
+        <NAlert type="info" :show-icon="false">
+          {{ $t('page.work_ticket_management.workflow.assignHint') }}
+        </NAlert>
+        <NForm label-placement="top">
+          <NFormItem :label="$t('page.work_ticket_management.workflow.ticketCode')">
+            <NInput :value="assigningTicket?.ticketCode || '—'" readonly />
+          </NFormItem>
+          <NFormItem :label="$t('page.work_ticket_management.workflow.worker')" required>
+            <NSelect
+              v-model:value="assignmentWorkerIds"
+              multiple
+              filterable
+              clearable
+              max-tag-count="responsive"
+              :options="
+                workers.filter(worker => worker.enabled).map(worker => ({ label: worker.name, value: worker.id }))
+              "
+              :placeholder="$t('page.work_ticket_management.workflow.noWorkers')"
+            />
+          </NFormItem>
+        </NForm>
+      </NSpace>
+      <template #footer>
+        <NSpace justify="end">
+          <NButton @click="assignmentVisible = false">{{ $t('page.work_ticket_management.workflow.cancel') }}</NButton>
+          <NButton
+            type="primary"
+            :disabled="!assignmentWorkerIds.length"
+            :loading="assignmentSaving"
+            @click="saveAssignment"
+          >
+            {{ $t('page.work_ticket_management.workflow.assignWorkers') }}
+          </NButton>
         </NSpace>
       </template>
     </NModal>

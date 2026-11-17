@@ -36,7 +36,7 @@ class OrderCreate(OrderBase):
     order_no: Annotated[str, Field(max_length=100)] = Field(title="订单号")
     part_no: Annotated[str, Field(max_length=200)] = Field(title="项目号")
     name: Annotated[str, Field(max_length=200)] = Field(title="名称")
-    net_weight: Decimal = Field(title="净重")
+    net_weight: Decimal | None = Field(None, title="净重")
 
 
 class OrderUpdate(OrderBase): ...

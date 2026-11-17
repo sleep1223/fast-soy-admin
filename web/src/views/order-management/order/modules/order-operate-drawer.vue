@@ -54,8 +54,7 @@ function createDefaultModel(): Api.OrderManagementManage.OrderAddParams {
 const rules: Record<string, App.Global.FormRule> = {
   orderNo: defaultRequiredRule,
   partNo: defaultRequiredRule,
-  name: defaultRequiredRule,
-  netWeight: defaultRequiredRule
+  name: defaultRequiredRule
 };
 
 function handleInitModel() {

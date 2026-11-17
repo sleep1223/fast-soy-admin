@@ -5,6 +5,12 @@ import { $t } from '@/locales';
 
 const line = defineModel<Api.WeighbridgeSettlementManage.LineInput>({ required: true });
 defineProps<{ readonly?: boolean }>();
+const netWeight = computed({
+  get: () => line.value.netWeight ?? '',
+  set: (value: string) => {
+    line.value.netWeight = value.trim() || null;
+  }
+});
 const manual = ref(!line.value.orderId && Boolean(line.value.partNo));
 const missingGrossWeight = ref(!(Number(line.value.grossWeight) > 0));
 const query = ref('');
@@ -13,12 +19,12 @@ const searching = ref(false);
 const selectOptions = computed(() => {
   const result = options.value.map(order => ({
     value: order.id,
-    label: `${order.partNo} | ${order.orderNo} | ${order.name} | ${order.netWeight} kg`
+    label: `${order.partNo} | ${order.orderNo} | ${order.name} | ${order.netWeight ?? '—'} kg`
   }));
   if (line.value.orderId && !result.some(option => option.value === line.value.orderId)) {
     result.push({
       value: line.value.orderId,
-      label: `${line.value.partNo} | ${line.value.orderNo ?? ''} | ${line.value.name} | ${line.value.netWeight} kg`
+      label: `${line.value.partNo} | ${line.value.orderNo ?? ''} | ${line.value.name} | ${line.value.netWeight ?? '—'} kg`
     });
   }
   return result;
@@ -73,12 +79,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="min-w-260px flex-col gap-8px">
-    <NSpace v-if="!readonly">
-      <NButton :type="!manual ? 'primary' : 'default'" size="small" @click="setManual(false)">
+  <div class="min-w-260px flex flex-col gap-8px">
+    <NSpace v-if="!readonly" class="mb-4px">
+      <NButton :type="!manual ? 'primary' : 'default'" :secondary="!manual" size="small" @click="setManual(false)">
         {{ $t('page.weighbridge_settlement.settlement.matched') }}
       </NButton>
-      <NButton :type="manual ? 'primary' : 'default'" size="small" @click="setManual(true)">
+      <NButton :type="manual ? 'primary' : 'default'" :secondary="manual" size="small" @click="setManual(true)">
         {{ $t('page.weighbridge_settlement.settlement.manual') }}
       </NButton>
     </NSpace>
@@ -95,48 +101,45 @@ onBeforeUnmount(() => {
     >
       <template #empty>{{ $t('page.weighbridge_settlement.settlement.noOrders') }}</template>
     </NSelect>
-    <div class="grid grid-cols-2 gap-8px">
-      <NInput
-        v-model:value="line.partNo"
-        :disabled="readonly || !manual"
-        :placeholder="$t('page.weighbridge_settlement.settlement.partNo')"
-        :aria-label="$t('page.weighbridge_settlement.settlement.partNo')"
-      />
-      <NInput
-        v-model:value="line.orderNo"
-        :disabled="readonly || !manual"
-        :placeholder="$t('page.weighbridge_settlement.settlement.orderNo')"
-        :aria-label="$t('page.weighbridge_settlement.settlement.orderNo')"
-      />
-      <NInput
-        v-model:value="line.name"
-        :disabled="readonly || !manual"
-        :placeholder="$t('page.weighbridge_settlement.settlement.name')"
-        :aria-label="$t('page.weighbridge_settlement.settlement.name')"
-      />
-      <NInput
-        v-model:value="line.netWeight"
-        :disabled="readonly || !manual"
-        :placeholder="$t('page.weighbridge_settlement.settlement.netWeight')"
-        :aria-label="$t('page.weighbridge_settlement.settlement.netWeight')"
-      />
-      <NInput
-        v-model:value="line.grossWeight"
-        :disabled="readonly || (!manual && !missingGrossWeight)"
-        :placeholder="$t('page.weighbridge_settlement.settlement.grossWeight')"
-        :aria-label="$t('page.weighbridge_settlement.settlement.grossWeight')"
-      />
-    </div>
-    <NFormItem :label="$t('page.weighbridge_settlement.settlement.quantity')" :show-feedback="false">
-      <NInputNumber
-        :value="line.quantity"
-        :min="1"
-        :max="2147483647"
-        :precision="0"
-        :disabled="readonly"
-        class="w-full"
-        @update:value="value => (line.quantity = value ?? 0)"
-      />
-    </NFormItem>
+    <NGrid cols="1 s:2" responsive="screen" :x-gap="12" :y-gap="4">
+      <NGi>
+        <NFormItem :label="$t('page.weighbridge_settlement.settlement.partNo')" :show-feedback="false">
+          <NInput v-model:value="line.partNo" :disabled="readonly || !manual" />
+        </NFormItem>
+      </NGi>
+      <NGi>
+        <NFormItem :label="$t('page.weighbridge_settlement.settlement.orderNo')" :show-feedback="false">
+          <NInput v-model:value="line.orderNo" :disabled="readonly || !manual" />
+        </NFormItem>
+      </NGi>
+      <NGi>
+        <NFormItem :label="$t('page.weighbridge_settlement.settlement.name')" :show-feedback="false">
+          <NInput v-model:value="line.name" :disabled="readonly || !manual" />
+        </NFormItem>
+      </NGi>
+      <NGi>
+        <NFormItem :label="$t('page.weighbridge_settlement.settlement.netWeight')" :show-feedback="false">
+          <NInput v-model:value="netWeight" :disabled="readonly || !manual" />
+        </NFormItem>
+      </NGi>
+      <NGi>
+        <NFormItem :label="$t('page.weighbridge_settlement.settlement.grossWeight')" :show-feedback="false">
+          <NInput v-model:value="line.grossWeight" :disabled="readonly || (!manual && !missingGrossWeight)" />
+        </NFormItem>
+      </NGi>
+      <NGi>
+        <NFormItem :label="$t('page.weighbridge_settlement.settlement.quantity')" :show-feedback="false">
+          <NInputNumber
+            :value="line.quantity"
+            :min="1"
+            :max="2147483647"
+            :precision="0"
+            :disabled="readonly"
+            class="w-full"
+            @update:value="value => (line.quantity = value ?? 0)"
+          />
+        </NFormItem>
+      </NGi>
+    </NGrid>
   </div>
 </template>

@@ -13,10 +13,12 @@ import {
 } from '@/service/api';
 import { useAuth } from '@/hooks/business/auth';
 import { $t } from '@/locales';
+import { useAppStore } from '@/store/modules/app';
 
 defineOptions({ name: 'WorkTicketMasterData' });
 
 const { hasAuth } = useAuth();
+const appStore = useAppStore();
 const workers = ref<Api.WorkTicketManagementManage.Worker[]>([]);
 const loading = ref(false);
 const keyword = ref('');
@@ -134,72 +136,84 @@ void loadWorkers();
 </script>
 
 <template>
-  <NCard :title="$t('page.work_ticket_management.worker.pageTitle')" :bordered="false" size="small">
-    <NSpace class="mb-12px" align="center" wrap>
-      <NInput
-        v-model:value="keyword"
-        clearable
-        :placeholder="$t('page.work_ticket_management.workflow.search')"
-        class="w-220px"
-        @keyup.enter="loadWorkers"
-      />
-      <NButton size="small" @click="loadWorkers">{{ $t('page.work_ticket_management.workflow.search') }}</NButton>
-      <NButton
-        size="small"
-        type="primary"
-        :disabled="!hasAuth('B_WORK_TICKET_MANAGEMENT_WORKER_CREATE')"
-        @click="addWorker"
-      >
-        {{ $t('page.work_ticket_management.workflow.addWorker') }}
-      </NButton>
-      <ExcelTransfer
-        :import-api="fetchImportWorker"
-        :preview-api="fetchPreviewImportWorker"
-        :export-api="() => fetchExportWorker({ current: 1, size: 1000 })"
-        :template-api="fetchWorkerImportTemplate"
-        @imported="loadWorkers"
-      />
-    </NSpace>
-    <NDataTable
-      :columns="columns"
-      :data="workers"
-      :loading="loading"
-      remote
-      :pagination="pagination"
-      :row-key="row => row.id"
+  <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
+    <NCard
+      :title="$t('page.work_ticket_management.worker.pageTitle')"
+      :bordered="false"
       size="small"
-    />
-
-    <NModal
-      v-model:show="formVisible"
-      preset="card"
-      :title="
-        form.id
-          ? $t('page.work_ticket_management.worker.editWorker')
-          : $t('page.work_ticket_management.worker.addWorker')
-      "
-      class="w-500px max-w-95vw"
+      class="card-wrapper sm:flex-1-hidden"
     >
-      <NForm label-placement="top">
-        <NFormItem :label="$t('page.work_ticket_management.worker.workerNo')">
-          <NInput v-model:value="form.workerNo" />
-        </NFormItem>
-        <NFormItem :label="$t('page.work_ticket_management.worker.name')" required>
-          <NInput v-model:value="form.name" />
-        </NFormItem>
-        <NFormItem :label="$t('page.work_ticket_management.worker.enabled')">
-          <NSwitch v-model:value="form.enabled" />
-        </NFormItem>
-        <NFormItem :label="$t('page.work_ticket_management.worker.remark')">
-          <NInput v-model:value="form.remark" />
-        </NFormItem>
-      </NForm>
-      <template #footer>
-        <NSpace justify="end">
-          <NButton @click="formVisible = false">{{ $t('common.cancel') }}</NButton>
-          <NButton type="primary" @click="saveWorker">{{ $t('common.confirm') }}</NButton>
+      <template #header-extra>
+        <NSpace align="center" wrap>
+          <NInput
+            v-model:value="keyword"
+            clearable
+            :placeholder="$t('page.work_ticket_management.workflow.search')"
+            class="w-220px"
+            @keyup.enter="loadWorkers"
+          />
+          <NButton size="small" @click="loadWorkers">{{ $t('page.work_ticket_management.workflow.search') }}</NButton>
+          <NButton
+            size="small"
+            type="primary"
+            :disabled="!hasAuth('B_WORK_TICKET_MANAGEMENT_WORKER_CREATE')"
+            @click="addWorker"
+          >
+            {{ $t('page.work_ticket_management.workflow.addWorker') }}
+          </NButton>
+          <ExcelTransfer
+            :import-api="fetchImportWorker"
+            :preview-api="fetchPreviewImportWorker"
+            :export-api="() => fetchExportWorker({ current: 1, size: 1000 })"
+            :template-api="fetchWorkerImportTemplate"
+            @imported="loadWorkers"
+          />
         </NSpace>
       </template>
-    </NModal>
-  </NCard>
+      <NDataTable
+        :columns="columns"
+        :data="workers"
+        :loading="loading"
+        remote
+        :pagination="pagination"
+        :row-key="row => row.id"
+        :flex-height="!appStore.isMobile"
+        :scroll-x="700"
+        size="small"
+        class="sm:h-full"
+      />
+
+      <NModal
+        v-model:show="formVisible"
+        preset="card"
+        :title="
+          form.id
+            ? $t('page.work_ticket_management.worker.editWorker')
+            : $t('page.work_ticket_management.worker.addWorker')
+        "
+        class="w-500px max-w-95vw"
+      >
+        <NForm label-placement="top">
+          <NFormItem :label="$t('page.work_ticket_management.worker.workerNo')">
+            <NInput v-model:value="form.workerNo" />
+          </NFormItem>
+          <NFormItem :label="$t('page.work_ticket_management.worker.name')" required>
+            <NInput v-model:value="form.name" />
+          </NFormItem>
+          <NFormItem :label="$t('page.work_ticket_management.worker.enabled')">
+            <NSwitch v-model:value="form.enabled" />
+          </NFormItem>
+          <NFormItem :label="$t('page.work_ticket_management.worker.remark')">
+            <NInput v-model:value="form.remark" />
+          </NFormItem>
+        </NForm>
+        <template #footer>
+          <NSpace justify="end">
+            <NButton @click="formVisible = false">{{ $t('common.cancel') }}</NButton>
+            <NButton type="primary" @click="saveWorker">{{ $t('common.confirm') }}</NButton>
+          </NSpace>
+        </template>
+      </NModal>
+    </NCard>
+  </div>
 </template>

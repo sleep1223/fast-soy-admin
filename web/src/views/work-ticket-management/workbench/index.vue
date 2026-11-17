@@ -289,15 +289,15 @@ watch([month, unitId], () => void openMonth());
 </script>
 
 <template>
-  <div class="flex-col gap-16px">
+  <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
     <MonthUnitToolbar v-model:month="month" v-model:unit-id="unitId" :units="units" :loading="loading">
-      <NButton type="primary" :disabled="!workMonthId" @click="openImport('plan')">导入当月件号</NButton>
-      <NButton :disabled="!workMonthId" @click="openImport('actual')">补录遗漏件号</NButton>
+      <NButton size="small" type="primary" :disabled="!workMonthId" @click="openImport('plan')">导入当月件号</NButton>
+      <NButton size="small" :disabled="!workMonthId" @click="openImport('actual')">补录遗漏件号</NButton>
     </MonthUnitToolbar>
 
     <NGrid cols="1 900:2" :x-gap="16" :y-gap="16" responsive="screen">
       <NGi>
-        <NCard title="当月项目号" :bordered="false" size="small">
+        <NCard title="当月项目号" :bordered="false" size="small" class="card-wrapper">
           <template #header-extra>
             <NSpace>
               <NInput
@@ -307,7 +307,7 @@ watch([month, unitId], () => void openMonth());
                 class="w-180px"
                 @keyup.enter="loadRows"
               />
-              <NButton @click="loadRows">搜索</NButton>
+              <NButton size="small" @click="loadRows">搜索</NButton>
             </NSpace>
           </template>
           <NDataTable
@@ -316,6 +316,7 @@ watch([month, unitId], () => void openMonth());
             :loading="loading"
             :row-key="row => row.id"
             :row-props="row => ({ onDblclick: () => selectProject(row) })"
+            :scroll-x="600"
             :pagination="{
               page: page.current,
               pageSize: page.size,
@@ -341,6 +342,7 @@ watch([month, unitId], () => void openMonth());
           :title="selectedRow ? `项目号：${selectedRow.normalizedPartNo}` : '订单与工票'"
           :bordered="false"
           size="small"
+          class="card-wrapper"
         >
           <NEmpty v-if="!selectedRow" description="选择左侧项目号，查看对应订单" />
           <template v-else>
@@ -382,6 +384,7 @@ watch([month, unitId], () => void openMonth());
                 :data="visibleTickets.filter(ticket => ticket.orderId === order.id)"
                 :row-key="ticket => ticket.id"
                 size="small"
+                :scroll-x="700"
               />
             </div>
           </template>
@@ -393,7 +396,7 @@ watch([month, unitId], () => void openMonth());
       v-model:show="importVisible"
       preset="card"
       :title="importSource === 'plan' ? '导入当月件号' : '补录遗漏件号'"
-      class="w-760px"
+      class="w-760px max-w-95vw"
     >
       <NSpace vertical>
         <div>选择 Excel 文件，只需要包含一列项目号。补录文件中已存在的项目号会跳过。</div>
@@ -412,7 +415,7 @@ watch([month, unitId], () => void openMonth());
       </NSpace>
     </NModal>
 
-    <NModal v-model:show="ticketVisible" preset="card" title="录入工票与工时" class="w-560px">
+    <NModal v-model:show="ticketVisible" preset="card" title="录入工票与工时" class="w-560px max-w-95vw">
       <NForm label-placement="top">
         <NFormItem label="订单号"><NInput :value="selectedOrder?.orderNo" readonly /></NFormItem>
         <NFormItem label="工票码" required>
@@ -447,8 +450,13 @@ watch([month, unitId], () => void openMonth());
             placeholder="可稍后登记"
           />
         </NFormItem>
-        <NButton type="primary" :loading="ticketSaving" @click="saveTicket">保存</NButton>
       </NForm>
+      <template #footer>
+        <NSpace justify="end">
+          <NButton @click="ticketVisible = false">取消</NButton>
+          <NButton type="primary" :loading="ticketSaving" @click="saveTicket">保存</NButton>
+        </NSpace>
+      </template>
     </NModal>
   </div>
 </template>

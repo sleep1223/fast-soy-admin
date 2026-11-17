@@ -65,6 +65,7 @@ class Order(BaseModel, AuditMixin):
     net_weight = fields.DecimalField(
         max_digits=16,
         decimal_places=6,
+        null=True,
         description="净重",
     )
 

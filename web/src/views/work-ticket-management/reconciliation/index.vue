@@ -222,7 +222,7 @@ onMounted(loadUnits);
       </NGi>
     </NGrid>
 
-    <NCard :bordered="false" size="small" class="card-wrapper">
+    <NCard :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <NTabs v-model:value="activeCategory" type="line">
         <NTabPane
           v-for="category in categoryLabels"
@@ -237,6 +237,7 @@ onMounted(loadUnits);
         :loading="loading"
         size="small"
         remote
+        :scroll-x="900"
         :pagination="{ page: page.current, pageSize: page.size, itemCount: total, onUpdatePage: (value: number) => { page.current = value; loadItems(); } }"
       />
     </NCard>

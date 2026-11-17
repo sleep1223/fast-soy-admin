@@ -55,6 +55,8 @@ const title = computed(() =>
 let session = 0;
 let previewSequence = 0;
 let timer: ReturnType<typeof setTimeout> | undefined;
+let draftKey: string | null = null;
+let draftReady = false;
 let nextKey = 0;
 const rowKeys = ref<number[]>([]);
 function defaultModel(): Api.WeighbridgeSettlementManage.WeighingTicketAddParams {
@@ -67,7 +69,7 @@ function toInput(line: Api.WeighbridgeSettlementManage.LineInput): Api.Weighbrid
     orderNo: line.orderNo,
     partNo: line.partNo,
     name: line.name,
-    netWeight: String(line.netWeight),
+    netWeight: line.netWeight?.trim() || null,
     grossWeight: line.grossWeight?.trim() || null,
     quantity: line.quantity
   };
@@ -97,6 +99,10 @@ function removeLine(index: number) {
   model.value.lines.splice(index, 1);
   rowKeys.value.splice(index, 1);
 }
+function validOptionalWeight(value: string | null | undefined) {
+  const weight = value?.trim() ?? '';
+  return !weight || (/^\d+(\.\d{1,6})?$/.test(weight) && Number(weight) > 0);
+}
 function valid() {
   return (
     /^\d+(\.\d{1,3})?$/.test(model.value.weight) &&
@@ -107,8 +113,7 @@ function valid() {
       line =>
         line.partNo.trim() &&
         line.name.trim() &&
-        /^\d+(\.\d{1,6})?$/.test(String(line.netWeight)) &&
-        Number(line.netWeight) > 0 &&
+        validOptionalWeight(line.netWeight) &&
         /^\d+(\.\d{1,6})?$/.test(line.grossWeight ?? '') &&
         Number(line.grossWeight) > 0 &&
         Number.isInteger(line.quantity) &&
@@ -176,6 +181,7 @@ async function initialize() {
     rowKeys.value = data.lines.map(() => ++nextKey);
   } else rowKeys.value = [];
   loading.value = false;
+  draftReady = true;
 }
 async function submit() {
   if (uploading.value) return;
@@ -206,6 +212,8 @@ async function submit() {
     const saved = await fetchGetWeighingTicket(result.data.id);
     if (saved.error) return;
     window.$message?.success($t('common.updateSuccess'));
+    draftKey = null;
+    draftReady = false;
     visible.value = false;
     emit('submitted');
   } finally {
@@ -213,8 +221,14 @@ async function submit() {
   }
 }
 watch(visible, value => {
-  if (value) initialize();
-  else {
+  if (value) {
+    const key = `${props.operateType}:${props.rowData?.id ?? 'new'}`;
+    if (draftKey !== key || !draftReady) {
+      draftKey = key;
+      draftReady = false;
+      initialize();
+    }
+  } else {
     session++;
     previewSequence++;
     clearTimeout(timer);
@@ -291,18 +305,29 @@ const totalTheoretical = computed(() => {
           <NDivider>{{ $t('page.weighbridge_settlement.settlement.lines') }}</NDivider>
           <WeighingLineTable v-if="readonly" :lines="preview?.lines ?? []" />
           <template v-else>
-            <NCard
-              v-for="(line, index) in model.lines"
-              :key="rowKeys[index]"
-              size="small"
-              class="mb-12px"
-              :title="`${index + 1}. ${line.orderId ? $t('page.weighbridge_settlement.settlement.matched') : $t('page.weighbridge_settlement.settlement.manual')}`"
-            >
+            <NCard v-for="(line, index) in model.lines" :key="rowKeys[index]" size="small" class="mb-12px">
+              <template #header>
+                <NSpace align="center" :size="8">
+                  <NTag round size="small" type="info">{{ index + 1 }}</NTag>
+                  <NText strong>{{ line.partNo || $t('page.weighbridge_settlement.settlement.partNo') }}</NText>
+                </NSpace>
+              </template>
               <template v-if="!readonly" #header-extra>
-                <NButton size="small" type="error" @click="removeLine(index)">{{ $t('common.delete') }}</NButton>
+                <NSpace align="center" :size="8">
+                  <NTag :type="line.orderId ? 'success' : 'default'" size="small" :bordered="false">
+                    {{
+                      line.orderId
+                        ? $t('page.weighbridge_settlement.settlement.matched')
+                        : $t('page.weighbridge_settlement.settlement.manual')
+                    }}
+                  </NTag>
+                  <NButton size="small" type="error" ghost @click="removeLine(index)">
+                    {{ $t('common.delete') }}
+                  </NButton>
+                </NSpace>
               </template>
               <WeighingLineEditor v-model="model.lines[index]" :readonly="readonly" />
-              <div class="grid grid-cols-2 gap-8px mt-12px">
+              <div class="mt-12px grid grid-cols-2 gap-x-16px gap-y-8px rounded bg-gray-50 p-12px dark:bg-gray-800">
                 <NText v-for="field in previewFields" :key="field">
                   {{ $t(`page.weighbridge_settlement.settlement.${field}`) }}:
                   {{ preview?.lines[index]?.[field] ?? '—' }}
@@ -310,7 +335,8 @@ const totalTheoretical = computed(() => {
               </div>
             </NCard>
           </template>
-          <NButton v-if="!readonly" dashed block @click="addLine">
+          <NButton v-if="!readonly" type="primary" dashed block class="mb-12px" @click="addLine">
+            <template #icon><icon-ic-round-add class="text-icon" /></template>
             {{ $t('page.weighbridge_settlement.settlement.addLine') }}
           </NButton>
           <NAlert v-if="previewError" type="error" class="mt-16px">

@@ -131,7 +131,7 @@ class WeighingLineOut(SchemaBase):
     order_no: str | None
     part_no: str
     name: str
-    net_weight: Decimal
+    net_weight: Decimal | None
     gross_weight: Decimal | None
     quantity: int
     position: int

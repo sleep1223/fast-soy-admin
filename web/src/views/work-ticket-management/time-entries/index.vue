@@ -20,12 +20,14 @@ import {
 } from '@/service/api';
 import { useAuth } from '@/hooks/business/auth';
 import { $t } from '@/locales';
+import { useAppStore } from '@/store/modules/app';
 import MonthUnitToolbar from '../shared/month-unit-toolbar.vue';
 import WorkerSelect from '../shared/worker-select.vue';
 
 defineOptions({ name: 'WorkTimeEntryPage' });
 
 const { hasAuth } = useAuth();
+const appStore = useAppStore();
 const month = ref(dayjs().format('YYYY-MM'));
 const unitId = ref<string | null>(null);
 const units = ref<Api.WorkTicketManagement.UnitOption[]>([]);
@@ -298,7 +300,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
       <NButton size="small" @click="exportEntries">{{ $t('page.work_ticket_management.workflow.export') }}</NButton>
     </MonthUnitToolbar>
 
-    <NCard :bordered="false" size="small" class="card-wrapper">
+    <NCard :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <NTabs v-model:value="tab" type="line">
         <NTabPane name="matrix" :tab="$t('page.work_ticket_management.workflow.timeMatrix')">
           <NSpace class="mb-12px" align="center" wrap>
@@ -331,6 +333,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
             :data="matrix?.tickets ?? []"
             :loading="matrixLoading"
             size="small"
+            :flex-height="!appStore.isMobile"
             :scroll-x="900"
           />
         </NTabPane>
@@ -349,6 +352,8 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
             :data="details"
             :loading="detailLoading"
             size="small"
+            :flex-height="!appStore.isMobile"
+            :scroll-x="900"
             remote
             :pagination="{ page: detailPage.page, pageSize: detailPage.size, itemCount: detailTotal, onUpdatePage: (page: number) => { detailPage.page = page; loadDetails(); } }"
           />

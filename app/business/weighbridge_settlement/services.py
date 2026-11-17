@@ -91,8 +91,8 @@ async def save_ticket(payload: WeighingTicketCreate | WeighingTicketUpdate, tick
                     if order is None:
                         raise BizError(code="4607", msg="所选订单不存在")
                     row.update({key: getattr(order, key) for key in ("order_no", "part_no", "name", "net_weight", "gross_weight")})
-            elif not item.part_no or not item.name or item.net_weight is None:
-                raise BizError(code="4601", msg="手动录入需要项目号、名称及净重")
+            elif not item.part_no or not item.name:
+                raise BizError(code="4601", msg="手动录入需要项目号及名称")
             row["id"] = item.id
             rows.append(row)
         amount, rows = calculate(payload.weight, price, rows)

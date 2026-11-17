@@ -48,7 +48,7 @@ declare namespace Api {
       orderNo: string | null;
       partNo: string;
       name: string;
-      netWeight: string;
+      netWeight: string | null;
       grossWeight?: string | null;
       quantity: number;
     };
@@ -72,7 +72,7 @@ declare namespace Api {
       partNo: string;
       orderNo: string;
       name: string;
-      netWeight: string;
+      netWeight: string | null;
       grossWeight?: string | null;
     };
     type Preview = { totalAmount: string; lines: WeighingLine[] };

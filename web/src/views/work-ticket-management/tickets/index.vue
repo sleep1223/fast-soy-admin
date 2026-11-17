@@ -26,12 +26,14 @@ import {
 } from '@/service/api';
 import { useAuth } from '@/hooks/business/auth';
 import { $t } from '@/locales';
+import { useAppStore } from '@/store/modules/app';
 import StatusTag from '../shared/status-tag.vue';
 import WorkerSelect from '../shared/worker-select.vue';
 
 defineOptions({ name: 'WorkTicketLedger' });
 
 const { hasAuth } = useAuth();
+const appStore = useAppStore();
 const month = ref(dayjs().format('YYYY-MM'));
 const unitId = ref<string | null>(null);
 const units = ref<Api.WorkTicketManagement.UnitOption[]>([]);
@@ -363,7 +365,7 @@ onMounted(async () => {
       </NSpace>
     </NCard>
 
-    <NCard :bordered="false" size="small" class="card-wrapper">
+    <NCard :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"
         :columns="columns"
@@ -373,11 +375,13 @@ onMounted(async () => {
         remote
         :pagination="{ page: search.current, pageSize: search.size, itemCount: total, showSizePicker: true, pageSizes: [20, 50, 100], onUpdatePage: (page: number) => { search.current = page; load(); }, onUpdatePageSize: (size: number) => { search.size = size; search.current = 1; load(); } }"
         size="small"
+        :flex-height="!appStore.isMobile"
+        :scroll-x="1200"
         :row-props="ticketRowProps"
       />
     </NCard>
 
-    <NDrawer v-model:show="detailVisible" :width="720">
+    <NDrawer v-model:show="detailVisible" :width="appStore.isMobile ? '100%' : 720">
       <NDrawerContent :title="$t('page.work_ticket_management.workflow.ticketDetail')" closable>
         <template v-if="detail">
           <NDescriptions :column="2" bordered size="small">

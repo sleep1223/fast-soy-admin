@@ -9,7 +9,7 @@ declare namespace Api {
       orderNo: string;
       partNo: string;
       name: string;
-      netWeight: number;
+      netWeight: number | null;
       grossWeight?: number | null;
       unit: string | null;
       quantity: number | null;
@@ -25,7 +25,7 @@ declare namespace Api {
       orderNo: string;
       partNo: string;
       name: string;
-      netWeight: number;
+      netWeight?: number | null;
       grossWeight?: number | null;
       unit?: string | null;
       quantity?: number | null;

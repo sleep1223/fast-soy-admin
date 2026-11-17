@@ -184,23 +184,53 @@ onMounted(async () => {
       </NSpace>
     </NCard>
 
-    <NCard :bordered="false" size="small" class="card-wrapper">
+    <NCard :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <NTabs v-model:value="tab" type="line" @update:value="load">
         <NTabPane name="monthly" :tab="$t('page.work_ticket_management.workflow.monthlyReport')">
-          <NDataTable :columns="monthlyColumns" :data="monthly?.rows ?? []" :loading="loading" size="small" />
+          <NDataTable
+            :columns="monthlyColumns"
+            :data="monthly?.rows ?? []"
+            :loading="loading"
+            size="small"
+            :scroll-x="800"
+          />
         </NTabPane>
         <NTabPane name="workerHours" :tab="$t('page.work_ticket_management.workflow.workerHours')">
-          <NDataTable :columns="workerColumns" :data="workerHours?.rows ?? []" :loading="loading" size="small" />
+          <NDataTable
+            :columns="workerColumns"
+            :data="workerHours?.rows ?? []"
+            :loading="loading"
+            size="small"
+            :scroll-x="600"
+          />
         </NTabPane>
         <NTabPane name="workerDates" :tab="$t('page.work_ticket_management.workflow.workerDates')">
-          <NDataTable :columns="dateColumns" :data="workerDates?.rows ?? []" :loading="loading" size="small" />
+          <NDataTable
+            :columns="dateColumns"
+            :data="workerDates?.rows ?? []"
+            :loading="loading"
+            size="small"
+            :scroll-x="400"
+          />
         </NTabPane>
         <NTabPane name="ticketStatus" :tab="$t('page.work_ticket_management.workflow.ticketStatus')">
-          <NDataTable :columns="statusColumns" :data="ticketStatus?.rows ?? []" :loading="loading" size="small" />
+          <NDataTable
+            :columns="statusColumns"
+            :data="ticketStatus?.rows ?? []"
+            :loading="loading"
+            size="small"
+            :scroll-x="400"
+          />
         </NTabPane>
         <NTabPane name="anomalies" :tab="$t('page.work_ticket_management.workflow.anomaliesReport')">
           <NAlert type="info" class="mb-12px">{{ $t('page.work_ticket_management.workflow.selectMonth') }}</NAlert>
-          <NDataTable :columns="anomalyColumns" :data="anomalies?.rows ?? []" :loading="loading" size="small" />
+          <NDataTable
+            :columns="anomalyColumns"
+            :data="anomalies?.rows ?? []"
+            :loading="loading"
+            size="small"
+            :scroll-x="500"
+          />
         </NTabPane>
       </NTabs>
     </NCard>

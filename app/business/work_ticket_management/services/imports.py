@@ -150,7 +150,6 @@ async def _build_preview(month_id: int, source_type: ImportSourceType, parsed: l
             await MonthlyImportRow
             .filter(
                 batch__work_month_id=month_id,
-                batch__source_type=source_type,
                 batch__status=ImportBatchStatus.active,
                 normalized_part_no__in=normalized_values,
             )
@@ -206,25 +205,6 @@ async def preview_import(work_month_id: int, source_type: ImportSourceType, cont
         return await _build_preview(work_month_id, source_type, parsed, errors, db)
 
 
-async def _batch_counts(batch_id: int, db: BaseDBAsyncClient) -> ImportCommitOut:
-    rows = MonthlyImportRow.filter(batch_id=batch_id).using_db(db)
-    total = await rows.count()
-    invalid = await rows.filter(match_status=MatchStatus.invalid).count()
-    duplicate = await rows.exclude(duplicate_of_row_id__isnull=True).count()
-    matched = await rows.filter(match_status=MatchStatus.matched).count()
-    ambiguous = await rows.filter(match_status=MatchStatus.ambiguous).count()
-    missing = await rows.filter(match_status__in=[MatchStatus.missing, MatchStatus.unassigned, MatchStatus.other_unit]).count()
-    return ImportCommitOut(
-        batch_id=sqid(batch_id),
-        row_count=total,
-        invalid_rows=invalid,
-        duplicate_rows=duplicate,
-        matched_rows=matched,
-        ambiguous_rows=ambiguous,
-        missing_rows=missing,
-    )
-
-
 async def _commit_parsed(
     work_month_id: int,
     source_type: ImportSourceType,
@@ -251,7 +231,13 @@ async def _commit_parsed(
                 .first()
             )
             if existing is not None:
-                return await _batch_counts(existing.id, db)
+                invalid_rows = sum(row.note == "项目号为空" or len(row.normalized_part_no) > 200 for row in parsed)
+                return ImportCommitOut(
+                    batch_id=sqid(existing.id),
+                    row_count=0,
+                    invalid_rows=invalid_rows,
+                    duplicate_rows=len(parsed) - invalid_rows,
+                )
         _, unit = await get_month_unit(work_month_id, db)
         decisions = await decide_matches([(index, row.normalized_part_no) for index, row in enumerate(parsed)], unit.id, db)
         normalized_values = [row.normalized_part_no for row in parsed if row.normalized_part_no]
@@ -261,7 +247,6 @@ async def _commit_parsed(
                 await MonthlyImportRow
                 .filter(
                     batch__work_month_id=work_month_id,
-                    batch__source_type=source_type,
                     batch__status=ImportBatchStatus.active,
                     normalized_part_no__in=normalized_values,
                 )
@@ -289,6 +274,12 @@ async def _commit_parsed(
             decision = decisions[index]
             duplicate_of = first_by_normalized.get(row.normalized_part_no)
             status = MatchStatus.invalid if row.note == "项目号为空" or len(row.normalized_part_no) > 200 else decision.status
+            # The monthly project list is the union of the initial list and all
+            # supplements. Keep the first valid occurrence only, regardless of
+            # which source file it came from.
+            if duplicate_of is not None and status != MatchStatus.invalid:
+                duplicate_rows += 1
+                continue
             created = await MonthlyImportRow.create(
                 batch_id=batch.id,
                 row_number=row.row_number,
@@ -306,9 +297,8 @@ async def _commit_parsed(
                 updated_by=actor,
                 using_db=db,
             )
-            first_by_normalized.setdefault(row.normalized_part_no, created.id)
-            if duplicate_of:
-                duplicate_rows += 1
+            if status != MatchStatus.invalid and row.normalized_part_no:
+                first_by_normalized.setdefault(row.normalized_part_no, created.id)
             if status == MatchStatus.invalid:
                 invalid_rows += 1
             elif status == MatchStatus.matched:

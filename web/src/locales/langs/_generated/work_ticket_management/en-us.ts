@@ -8,7 +8,7 @@ export default {
     'work-ticket-management_time-entries': 'Time entry',
     'work-ticket-management_reconciliation': 'Monthly reconciliation',
     'work-ticket-management_reports': 'Reports',
-    'work-ticket-management_master-data': 'People & units',
+    'work-ticket-management_master-data': 'Workers',
     'work-ticket-management': 'WorkTicketManagement',
     'work-ticket-management_production-unit': 'Production Unit',
     'work-ticket-management_worker': 'Worker',

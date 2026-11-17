@@ -9,7 +9,7 @@ export default {
     'work-ticket-management_time-entries': '工时登记',
     'work-ticket-management_reconciliation': '月度核对',
     'work-ticket-management_reports': '统计报表',
-    'work-ticket-management_master-data': '人员与生产单位',
+    'work-ticket-management_master-data': '人员管理',
     'work-ticket-management': '工票工时管理',
     'work-ticket-management_production-unit': '生产单位',
     'work-ticket-management_worker': '生产人员',

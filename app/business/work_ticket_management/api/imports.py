@@ -25,7 +25,7 @@ router = APIRouter()
 MAX_IMPORT_BYTES = 5 * 1024 * 1024
 
 
-def _parse_options(raw: str | None) -> ExcelImportOptions | None:
+def parse_options(raw: str | None) -> ExcelImportOptions | None:
     if raw is None or not raw.strip():
         return None
     try:
@@ -34,7 +34,7 @@ def _parse_options(raw: str | None) -> ExcelImportOptions | None:
         raise BizError(code=Code.REQUEST_VALIDATION, msg="Excel 导入参数无效") from exc
 
 
-async def _read_file(file: UploadFile) -> bytes:
+async def read_excel_file(file: UploadFile) -> bytes:
     try:
         content = await file.read(MAX_IMPORT_BYTES + 1)
         if len(content) > MAX_IMPORT_BYTES:
@@ -58,8 +58,8 @@ async def preview_import(
     source_type: Annotated[ImportSourceType, Form()],
     options: Annotated[str | None, Form()] = None,
 ) -> Success:
-    content = await _read_file(file)
-    result = await imports.preview_import(decode_id(work_month_id), source_type, content, _parse_options(options))
+    content = await read_excel_file(file)
+    result = await imports.preview_import(decode_id(work_month_id), source_type, content, parse_options(options))
     return Success(data=dump(result))
 
 
@@ -76,8 +76,8 @@ async def commit_import(
     source_name: Annotated[str | None, Form()] = None,
     options: Annotated[str | None, Form()] = None,
 ) -> Success:
-    content = await _read_file(file)
-    result = await imports.commit_import(decode_id(work_month_id), source_type, content, _parse_options(options), source_name or file.filename)
+    content = await read_excel_file(file)
+    result = await imports.commit_import(decode_id(work_month_id), source_type, content, parse_options(options), source_name or file.filename)
     return Success(data=dump(result))
 
 

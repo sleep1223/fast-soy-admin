@@ -82,8 +82,7 @@ function editWorker(row: Api.WorkTicketManagementManage.Worker) {
 async function saveWorker() {
   const payload = {
     ...form,
-    workerNo: form.workerNo || null,
-    productionUnitId: null
+    workerNo: form.workerNo || null
   };
   const { error } = form.id
     ? await fetchUpdateWorker({ ...payload, id: form.id })

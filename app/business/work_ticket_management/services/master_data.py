@@ -12,6 +12,7 @@ from tortoise.transactions import in_transaction
 from app.business.work_ticket_management.models import (
     OrderUnitMapping,
     ProductionUnit,
+    WorkAssetAllocation,
     Worker,
     WorkMonth,
     WorkTicketAssignment,
@@ -159,10 +160,10 @@ async def ensure_order_mapping(order_id: int, production_unit_id: int, db: BaseD
 
 
 async def delete_worker(worker_id: int, db: BaseDBAsyncClient) -> None:
-    worker = await Worker.filter(id=worker_id).using_db(db).first()
+    worker = await Worker.filter(id=worker_id).using_db(db).select_for_update().first()
     if worker is None:
         raise BizError(code=Code.WORK_WORKER_NOT_FOUND, msg="人员不存在")
-    if await WorkTicketAssignment.filter(worker_id=worker_id).using_db(db).exists():
+    if await WorkTicketAssignment.filter(worker_id=worker_id).using_db(db).exists() or await WorkAssetAllocation.filter(worker_id=worker_id).using_db(db).exists():
         raise BizError(code=Code.WORK_WORKER_HAS_HISTORY, msg=f"人员 {worker.name} 已有工票分配记录，请停用而非删除")
     await worker.delete(using_db=db)
 

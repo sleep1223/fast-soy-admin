@@ -1,649 +1,464 @@
 <script setup lang="ts">
-import { computed, h, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, shallowRef } from 'vue';
 import dayjs from 'dayjs';
-import type { DataTableColumns, UploadCustomRequestOptions } from 'naive-ui';
-import { NButton, NTag } from 'naive-ui';
+import ExcelImportPreview from '@/components/advanced/excel-import-preview.vue';
 import OcrRecognizer from '@/components/advanced/ocr-recognizer.vue';
-import {
-  fetchAssignTicket,
-  fetchCreateTicket,
-  fetchImportCommit,
-  fetchImportPreview,
-  fetchImportRows,
-  fetchOpenWorkMonth,
-  fetchOrderCandidates,
-  fetchProductionUnitOptions,
-  fetchTickets,
-  fetchWorkerOptions
-} from '@/service/api';
+import { useAuth } from '@/hooks/business/auth';
 import { $t } from '@/locales';
-import { useAppStore } from '@/store/modules/app';
-import MonthUnitToolbar from '../shared/month-unit-toolbar.vue';
+import {
+  fetchAddWorkAssetAllocation,
+  fetchAddWorkAssetTicket,
+  fetchGetWorkProjectList,
+  fetchGetWorkProjectOrderList,
+  fetchImportWorkProject,
+  fetchPreviewImportWorkProject,
+  fetchUpdateWorkAssetAllocation,
+  fetchUpdateWorkAssetTicket,
+  fetchWorkAssetTickets
+} from '@/service/api/work_ticket_management-assets';
+import type {
+  AssetAllocation,
+  AssetOrder,
+  AssetProject,
+  AssetTicket,
+  TicketInput
+} from '@/service/api/work_ticket_management-assets';
+import { fetchWorkerOptions } from '@/service/api/work_ticket_management-workflow';
+import type { ExcelImportOptions } from '@/utils/excel';
+import AssetReport from './asset-report.vue';
 
 defineOptions({ name: 'WorkTicketWorkbench' });
 
-const appStore = useAppStore();
-const month = ref(dayjs().format('YYYY-MM'));
-const units = ref<Api.WorkTicketManagement.UnitOption[]>([]);
-const unitId = ref<string | null>(null);
-const workMonthId = ref<string | null>(null);
-const loading = ref(false);
-const rows = ref<Api.WorkTicketManagement.ImportRow[]>([]);
-const total = ref(0);
+const { hasAuth } = useAuth();
+const canImport = computed(() => hasAuth('B_WORK_TICKET_MANAGEMENT_IMPORT_PLAN'));
+const canEditTickets = computed(() => hasAuth('B_WORK_TICKET_MANAGEMENT_TICKET_CREATE'));
+const canUseOcr = computed(() => hasAuth('B_WORK_TICKET_MANAGEMENT_TICKET_OCR'));
+const canAllocate = computed(() => hasAuth('B_WORK_TICKET_MANAGEMENT_TIME_EDIT'));
+const t = (key: string) => $t(`page.work_ticket_management.assets.${key}` as const);
+
+const pageSize = 15;
 const keyword = ref('');
-const page = reactive({ current: 1, size: 20 });
-const selectedRow = ref<Api.WorkTicketManagement.ImportRow | null>(null);
-const candidates = ref<Api.WorkTicketManagement.OrderCandidate[]>([]);
-const tickets = ref<Api.WorkTicketManagement.Ticket[]>([]);
-const workers = ref<Api.WorkTicketManagement.WorkerOption[]>([]);
-const onlyUnassigned = ref(false);
-let selectionRequest = 0;
-let monthRequest = 0;
+const projectPage = ref(1);
+const projectTotal = ref(0);
+const projects = shallowRef<AssetProject[]>([]);
+const project = shallowRef<AssetProject | null>(null);
+const orderPage = ref(1);
+const orderTotal = ref(0);
+const orders = shallowRef<AssetOrder[]>([]);
+const order = shallowRef<AssetOrder | null>(null);
+const tickets = shallowRef<AssetTicket[]>([]);
+const loadingProjects = ref(false);
+const loadingOrders = ref(false);
+const loadingTickets = ref(false);
+let projectRequest = 0;
+let orderRequest = 0;
+let ticketRequest = 0;
 
-async function loadUnits() {
-  const { data } = await fetchProductionUnitOptions();
-  units.value = data ?? [];
-  if (!unitId.value && units.value.length) unitId.value = units.value[0].id;
-}
-
-async function openMonth() {
-  const currentRequest = ++monthRequest;
-  selectionRequest += 1;
-  selectedRow.value = null;
-  candidates.value = [];
-  tickets.value = [];
-  workMonthId.value = null;
-  rows.value = [];
-  total.value = 0;
-  if (!unitId.value) {
-    loading.value = false;
-    return;
-  }
-  loading.value = true;
-  const { data, error } = await fetchOpenWorkMonth({ yearMonth: month.value, productionUnitId: unitId.value });
-  if (currentRequest !== monthRequest) return;
-  loading.value = false;
-  if (error || !data) return;
-  workMonthId.value = data.id;
-  await Promise.all([loadRows(), loadWorkers()]);
-}
-
-async function loadRows() {
-  if (!workMonthId.value) return;
-  loading.value = true;
-  const { data, error } = await fetchImportRows({
-    workMonthId: workMonthId.value,
-    sourceType: null,
-    matchStatus: null,
-    keyword: keyword.value.trim() || null,
-    current: page.current,
-    size: page.size
+async function loadProjects(page = projectPage.value) {
+  const requestId = ++projectRequest;
+  projectPage.value = page;
+  loadingProjects.value = true;
+  const { data, error } = await fetchGetWorkProjectList({
+    current: page,
+    size: pageSize,
+    partNo: keyword.value.trim()
   });
-  loading.value = false;
-  if (!error && data) {
-    rows.value = data.records;
-    total.value = data.total;
-    if (selectedRow.value && !rows.value.some(row => row.id === selectedRow.value?.id)) {
-      selectedRow.value = null;
-      candidates.value = [];
-      tickets.value = [];
-    }
-  }
-}
-
-async function loadWorkers() {
-  const { data } = await fetchWorkerOptions();
-  workers.value = data ?? [];
-}
-
-async function selectProject(row: Api.WorkTicketManagement.ImportRow) {
-  const currentRequest = ++selectionRequest;
-  selectedRow.value = row;
-  candidates.value = [];
-  tickets.value = [];
-  if (!workMonthId.value) return;
-  loading.value = true;
-  const [ordersResult, ticketsResult] = await Promise.all([
-    fetchOrderCandidates({
-      workMonthId: workMonthId.value,
-      partNo: row.normalizedPartNo || row.rawPartNo,
-      limit: 1000,
-      includeOtherUnits: true,
-      includePartial: false
-    }),
-    fetchTickets({ workMonthId: workMonthId.value, current: 1, size: 1000 })
-  ]);
-  if (currentRequest !== selectionRequest) return;
-  loading.value = false;
-  if (ordersResult.error || ticketsResult.error) {
-    window.$message?.error($t('page.work_ticket_management.workflow.loadFailed'));
-    return;
-  }
-  candidates.value = ordersResult.data ?? [];
-  const orderIds = new Set(candidates.value.map(order => order.id));
-  tickets.value = (ticketsResult.data?.records ?? []).filter(ticket => orderIds.has(ticket.orderId ?? ''));
-}
-
-const matchStatusLabels: Record<Api.WorkTicketManagement.MatchStatus, string> = {
-  pending: $t('page.work_ticket_management.workflow.pending'),
-  matched: $t('page.work_ticket_management.workflow.matched'),
-  ambiguous: $t('page.work_ticket_management.workflow.ambiguous'),
-  missing: $t('page.work_ticket_management.workflow.missing'),
-  unassigned: $t('page.work_ticket_management.workflow.unassigned'),
-  other_unit: $t('page.work_ticket_management.workflow.otherUnit'),
-  invalid: $t('page.work_ticket_management.workflow.invalid')
-};
-const mappingStatusLabels: Record<Api.WorkTicketManagement.OrderCandidate['mappingStatus'], string> = {
-  confirmed: $t('page.work_ticket_management.workflow.mappingConfirmed'),
-  other_unit: $t('page.work_ticket_management.workflow.mappingOther'),
-  unconfirmed: $t('page.work_ticket_management.workflow.mappingUnconfirmed')
-};
-
-const columns: DataTableColumns<Api.WorkTicketManagement.ImportRow> = [
-  { title: $t('page.work_ticket_management.workflow.partNo'), key: 'normalizedPartNo', minWidth: 180 },
-  {
-    title: $t('page.work_ticket_management.workflow.source'),
-    key: 'sourceType',
-    width: 100,
-    render: row =>
-      $t(
-        row.sourceType === 'plan'
-          ? 'page.work_ticket_management.workflow.plan'
-          : 'page.work_ticket_management.workflow.actual'
-      )
-  },
-  {
-    title: $t('page.work_ticket_management.workflow.status'),
-    key: 'matchStatus',
-    width: 120,
-    render: row =>
-      h(
-        NTag,
-        {
-          type: row.matchStatus === 'matched' ? 'success' : row.matchStatus === 'ambiguous' ? 'warning' : 'default',
-          bordered: false,
-          size: 'small'
-        },
-        {
-          default: () => matchStatusLabels[row.matchStatus]
-        }
-      )
-  },
-  {
-    title: $t('page.work_ticket_management.workflow.actions'),
-    key: 'actions',
-    width: 140,
-    render: row =>
-      h(
-        NButton,
-        { size: 'small', type: 'primary', ghost: true, onClick: () => void selectProject(row) },
-        { default: () => $t('page.work_ticket_management.workflow.candidateOrders') }
-      )
-  }
-];
-
-// Import one initial list, then supplement it. The backend deduplicates both
-// sources on normalized project number, so a supplement never adds an existing number.
-const importVisible = ref(false);
-const importSource = ref<Api.WorkTicketManagement.ImportSourceType>('plan');
-const importFile = ref<File | null>(null);
-const importPreview = ref<Api.WorkTicketManagement.ImportPreview | null>(null);
-const importBusy = ref(false);
-function openImport(source: Api.WorkTicketManagement.ImportSourceType) {
-  importSource.value = source;
-  importFile.value = null;
-  importPreview.value = null;
-  importVisible.value = true;
-}
-async function previewFile(options: UploadCustomRequestOptions) {
-  if (!options.file.file || !workMonthId.value) return options.onError();
-  importBusy.value = true;
-  const { data, error } = await fetchImportPreview(options.file.file, workMonthId.value, importSource.value);
-  importBusy.value = false;
-  if (error || !data) return options.onError();
-  importFile.value = options.file.file;
-  importPreview.value = data;
-  options.onFinish();
-}
-async function commitImport() {
-  if (!importFile.value || !workMonthId.value) return;
-  importBusy.value = true;
-  const { data, error } = await fetchImportCommit(importFile.value, workMonthId.value, importSource.value);
-  importBusy.value = false;
+  if (requestId !== projectRequest) return;
+  loadingProjects.value = false;
   if (error || !data) return;
-  importVisible.value = false;
-  window.$message?.success(
-    $t('page.work_ticket_management.workflow.importCompleted', {
-      count: data.rowCount,
-      duplicates: data.duplicateRows
-    })
-  );
-  page.current = 1;
-  await loadRows();
+  projects.value = data.records;
+  projectTotal.value = data.total;
 }
 
-const ticketVisible = ref(false);
-const ticketSaving = ref(false);
-const selectedOrder = ref<Api.WorkTicketManagement.OrderCandidate | null>(null);
-const ticketForm = reactive({
-  code: '',
-  codeSource: 'manual'
-});
-function openTicket(order: Api.WorkTicketManagement.OrderCandidate) {
-  selectedOrder.value = order;
-  Object.assign(ticketForm, {
-    code: '',
-    codeSource: 'manual'
-  });
-  ticketVisible.value = true;
+async function selectProject(item: AssetProject, page = 1, keepOrder = false) {
+  const requestId = ++orderRequest;
+  project.value = item;
+  orderPage.value = page;
+  if (!keepOrder) {
+    ++ticketRequest;
+    order.value = null;
+    tickets.value = [];
+    loadingTickets.value = false;
+    orders.value = [];
+    orderTotal.value = 0;
+  }
+  loadingOrders.value = true;
+  const { data, error } = await fetchGetWorkProjectOrderList(item.id, { current: page, size: pageSize });
+  if (requestId !== orderRequest) return;
+  loadingOrders.value = false;
+  if (error || !data) return;
+  orders.value = data.records;
+  orderTotal.value = data.total;
 }
-async function copyOrderNo(orderNo: string) {
+
+async function selectOrder(item: AssetOrder) {
+  const requestId = ++ticketRequest;
+  if (order.value?.id !== item.id) tickets.value = [];
+  order.value = item;
+  loadingTickets.value = true;
+  const { data, error } = await fetchWorkAssetTickets(item.id);
+  if (requestId !== ticketRequest) return;
+  loadingTickets.value = false;
+  if (!error && data) tickets.value = data;
+}
+
+const importFile = shallowRef<File | null>(null);
+
+function readFile(event: Event) {
+  const input = event.target as HTMLInputElement;
+  importFile.value = input.files?.[0] ?? null;
+  input.value = '';
+}
+
+async function importProjects(file: File, options?: ExcelImportOptions) {
+  const result = await fetchImportWorkProject(file, options);
+  if (!result.error && result.data) {
+    const { matchedOrderCount, unmatchedProjectCount } = result.data;
+    const summary = $t('page.work_ticket_management.assets.importResult', {
+      orders: matchedOrderCount,
+      projects: unmatchedProjectCount
+    });
+    window.$message?.info(summary);
+    void loadProjects(1);
+    if (project.value) void selectProject(project.value, orderPage.value, true);
+  }
+  return result;
+}
+
+async function copyOrder(orderNo: string) {
   try {
     await navigator.clipboard.writeText(orderNo);
-    window.$message?.success($t('page.work_ticket_management.workflow.orderCodeCopied'));
+    window.$message?.success(t('copied'));
   } catch {
-    window.$message?.error($t('page.work_ticket_management.workflow.copyFailed'));
+    window.$message?.warning(t('copyFailed'));
   }
 }
-function onOcrRecognized(result: Api.Ocr.Result) {
-  ticketForm.code = result.text.trim();
-  ticketForm.codeSource = 'ocr';
+
+const editingTicket = shallowRef<AssetTicket | null>(null);
+const ticketVisible = ref(false);
+const ticketBusy = ref(false);
+const showOcr = ref(false);
+const ocrOptions = ref<{ label: string; value: string }[]>([]);
+const ticketForm = reactive<TicketInput>({ ticketCode: '', codeSource: 'manual', totalHours: null });
+
+function openTicket(item: AssetTicket | null = null) {
+  editingTicket.value = item;
+  ticketForm.ticketCode = item?.ticketCode ?? '';
+  ticketForm.codeSource = item?.codeSource ?? 'manual';
+  ticketForm.totalHours = item?.totalHours == null ? null : Number(item.totalHours);
+  ocrOptions.value = [];
+  showOcr.value = false;
+  ticketVisible.value = true;
 }
+
+function ocrRecognized(result: Api.Ocr.Result) {
+  const candidates = [
+    ...new Set(result.items.map(item => item.text.trim()).filter(code => code && code.length <= 100))
+  ];
+  ocrOptions.value = candidates.map(code => ({ label: code, value: code }));
+}
+
 async function saveTicket() {
-  if (!workMonthId.value || !selectedRow.value || !selectedOrder.value) return;
-  if (!ticketForm.code.trim()) {
-    window.$message?.warning($t('page.work_ticket_management.workflow.ticketCodeRequired'));
-    return;
-  }
-  ticketSaving.value = true;
-  const { data: ticket, error } = await fetchCreateTicket({
-    workMonthId: workMonthId.value,
-    orderId: selectedOrder.value.id,
-    sourceImportRowId: selectedRow.value.id,
-    partNoSnapshot: selectedOrder.value.partNo,
-    nameSnapshot: selectedOrder.value.name,
-    ticketCode: ticketForm.code.trim() || null,
-    codeSource: ticketForm.codeSource,
-    allowAddMapping: true
-  });
-  if (error || !ticket) {
-    ticketSaving.value = false;
-    return;
-  }
-  ticketSaving.value = false;
-  ticketVisible.value = false;
-  await selectProject(selectedRow.value);
-  window.$message?.success($t('page.work_ticket_management.workflow.saveSuccess'));
-}
-
-const assignmentVisible = ref(false);
-const assignmentSaving = ref(false);
-const assigningTicket = ref<Api.WorkTicketManagement.Ticket | null>(null);
-const assignmentWorkerIds = ref<string[]>([]);
-function openAssignment(ticket: Api.WorkTicketManagement.Ticket) {
-  assigningTicket.value = ticket;
-  assignmentWorkerIds.value = [];
-  assignmentVisible.value = true;
-}
-async function saveAssignment() {
-  if (!assigningTicket.value || !assignmentWorkerIds.value.length) return;
-  assignmentSaving.value = true;
-  const { error } = await fetchAssignTicket(
-    assigningTicket.value.id,
-    assigningTicket.value.revision,
-    assignmentWorkerIds.value
-  );
-  assignmentSaving.value = false;
+  const selected = order.value;
+  if (!selected || !ticketForm.ticketCode.trim() || ticketBusy.value) return;
+  ticketBusy.value = true;
+  const { error } = editingTicket.value
+    ? await fetchUpdateWorkAssetTicket(editingTicket.value.id, ticketForm)
+    : await fetchAddWorkAssetTicket(selected.id, ticketForm);
+  ticketBusy.value = false;
   if (error) return;
-  assignmentVisible.value = false;
-  if (selectedRow.value) await selectProject(selectedRow.value);
-  window.$message?.success($t('page.work_ticket_management.workflow.saveSuccess'));
+  ticketVisible.value = false;
+  await selectOrder(selected);
+  if (project.value) void selectProject(project.value, orderPage.value, true);
 }
 
-const visibleTickets = computed(() =>
-  onlyUnassigned.value ? tickets.value.filter(ticket => ticket.assignmentCount === 0) : tickets.value
-);
-function ticketsForOrder(orderId: string) {
-  return visibleTickets.value.filter(ticket => ticket.orderId === orderId);
-}
-const ticketColumns: DataTableColumns<Api.WorkTicketManagement.Ticket> = [
-  {
-    title: $t('page.work_ticket_management.workflow.ticketCode'),
-    key: 'ticketCode',
-    render: ticket => ticket.ticketCode || '—'
-  },
-  {
-    title: $t('page.work_ticket_management.workflow.assignment'),
-    key: 'workerNames',
-    render: ticket => ticket.workerNames.join('、') || $t('page.work_ticket_management.workflow.unassigned')
-  },
-  {
-    title: $t('page.work_ticket_management.workflow.totalHours'),
-    key: 'totalHours',
-    render: ticket => `${ticket.totalHours} ${$t('page.work_ticket_management.workflow.hours')}`
-  },
-  {
-    title: $t('page.work_ticket_management.workflow.actions'),
-    key: 'actions',
-    width: 140,
-    render: ticket =>
-      h(
-        NButton,
-        {
-          size: 'small',
-          type: 'primary',
-          ghost: true,
-          disabled: ticket.status !== 'active',
-          onClick: () => openAssignment(ticket)
-        },
-        { default: () => $t('page.work_ticket_management.workflow.assignWorkers') }
-      )
+const allocation = shallowRef<{ ticket: AssetTicket; record: AssetAllocation | null } | null>(null);
+const allocationBusy = ref(false);
+const workerOptions = shallowRef<{ label: string; value: string }[]>([]);
+const assignedWorker = ref<string | null>(null);
+const assignedOn = ref<string | null>(null);
+const assignedHours = ref<number | null>(null);
+
+async function openAllocation(ticket: AssetTicket, record: AssetAllocation | null = null) {
+  allocation.value = { ticket, record };
+  assignedWorker.value = record?.workerId ?? null;
+  assignedOn.value = record?.assignedOn ?? dayjs().format('YYYY-MM-DD');
+  assignedHours.value = record?.hours == null ? null : Number(record.hours);
+  const { data, error } = await fetchWorkerOptions();
+  if (!error && data && allocation.value?.ticket.id === ticket.id && allocation.value.record === record) {
+    const options = data.map(item => ({
+      label: item.workerNo ? `${item.name} · ${item.workerNo}` : item.name,
+      value: item.id
+    }));
+    if (record && !options.some(item => item.value === record.workerId)) {
+      options.push({ label: record.workerName, value: record.workerId });
+    }
+    workerOptions.value = options;
   }
-];
-const previewColumns: DataTableColumns<Api.WorkTicketManagement.ImportPreviewRow> = [
-  { title: $t('page.work_ticket_management.workflow.partNo'), key: 'rawPartNo' },
-  {
-    title: $t('page.work_ticket_management.workflow.orderNo'),
-    key: 'orderNo',
-    render: row =>
-      row.orderNo ||
-      (row.duplicateOfRowId
-        ? $t('page.work_ticket_management.workflow.duplicate')
-        : $t('page.work_ticket_management.workflow.unmatched'))
-  },
-  { title: $t('page.work_ticket_management.workflow.remark'), key: 'note' }
-];
+}
 
-onMounted(async () => {
-  await loadUnits();
-});
-watch([month, unitId], () => void openMonth());
+async function saveAllocation() {
+  const target = allocation.value;
+  const selected = order.value;
+  if (!target || !selected || !assignedOn.value || !assignedWorker.value || allocationBusy.value) return;
+  allocationBusy.value = true;
+  const payload = { workerId: assignedWorker.value, assignedOn: assignedOn.value, hours: assignedHours.value };
+  const { error } = target.record
+    ? await fetchUpdateWorkAssetAllocation(target.ticket.id, target.record.id, payload)
+    : await fetchAddWorkAssetAllocation(target.ticket.id, payload);
+  allocationBusy.value = false;
+  if (error) return;
+  allocation.value = null;
+  await selectOrder(selected);
+}
+
+onMounted(() => loadProjects());
 </script>
 
 <template>
-  <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <MonthUnitToolbar v-model:month="month" v-model:unit-id="unitId" :units="units" :loading="loading">
-      <NButton size="small" type="primary" :disabled="!workMonthId" @click="openImport('plan')">
-        {{ $t('page.work_ticket_management.workflow.importPlan') }}
-      </NButton>
-      <NButton size="small" :disabled="!workMonthId" @click="openImport('actual')">
-        {{ $t('page.work_ticket_management.workflow.importActual') }}
-      </NButton>
-    </MonthUnitToolbar>
-
-    <NGrid cols="1 900:2" :x-gap="16" :y-gap="16" responsive="screen" class="sm:flex-1-hidden">
-      <NGi>
-        <NCard
-          :title="$t('page.work_ticket_management.workflow.importRows')"
-          :bordered="false"
-          size="small"
-          class="card-wrapper sm:flex-1-hidden"
-        >
+  <NTabs type="line" animated class="min-h-0">
+    <NTabPane name="assets" :tab="t('assets')">
+      <div class="grid gap-16px xl:grid-cols-[18rem_minmax(0,1fr)]">
+        <NCard :title="t('projects')" size="small">
           <template #header-extra>
-            <NSpace align="center" wrap>
-              <NInput
-                v-model:value="keyword"
-                clearable
-                :placeholder="$t('page.work_ticket_management.workflow.searchProjectNumbers')"
-                class="w-180px"
-                @keyup.enter="loadRows"
+            <label v-if="canImport" class="relative inline-block">
+              <NButton tag="span" size="small" type="primary" secondary>{{ t('import') }}</NButton>
+              <input
+                type="file"
+                accept=".xlsx"
+                :aria-label="t('import')"
+                class="absolute inset-0 size-full cursor-pointer opacity-0"
+                @change="readFile"
               />
-              <NButton size="small" @click="loadRows">{{ $t('page.work_ticket_management.workflow.search') }}</NButton>
-            </NSpace>
+            </label>
           </template>
-          <NDataTable
-            :columns="columns"
-            :data="rows"
-            :loading="loading"
-            :flex-height="!appStore.isMobile"
-            :row-key="row => row.id"
-            :row-props="row => ({ onDblclick: () => selectProject(row) })"
-            :scroll-x="600"
-            :pagination="{
-              page: page.current,
-              pageSize: page.size,
-              itemCount: total,
-              onUpdatePage: (value: number) => {
-                page.current = value;
-                loadRows();
-              },
-              onUpdatePageSize: (value: number) => {
-                page.size = value;
-                page.current = 1;
-                loadRows();
-              }
-            }"
-            size="small"
-            class="sm:h-full"
-          />
-          <div class="mt-8px text-12px text-gray">
-            {{ $t('page.work_ticket_management.workflow.importProjectHint') }}
-          </div>
-        </NCard>
-      </NGi>
 
-      <NGi>
-        <NCard
-          :title="
-            selectedRow
-              ? `${$t('page.work_ticket_management.workflow.partNo')}：${selectedRow.normalizedPartNo}`
-              : $t('page.work_ticket_management.workflow.candidateOrders')
-          "
-          :bordered="false"
-          size="small"
-          class="card-wrapper sm:flex-1-hidden"
-        >
-          <NEmpty v-if="!selectedRow" :description="$t('page.work_ticket_management.workflow.selectRowHint')" />
-          <template v-else>
-            <div class="mb-12px flex flex-wrap items-center justify-between gap-8px">
-              <div class="text-13px text-gray">
-                {{ $t('page.work_ticket_management.workflow.orderCount', { count: candidates.length }) }}
+          <NInputGroup>
+            <NInput v-model:value="keyword" clearable :placeholder="t('partNo')" @keyup.enter="loadProjects(1)" />
+            <NButton @click="loadProjects(1)">{{ $t('common.search') }}</NButton>
+          </NInputGroup>
+          <NSpin :show="loadingProjects" class="my-12px">
+            <NEmpty v-if="!projects.length" :description="t('emptyProjects')" />
+            <NList v-else hoverable clickable>
+              <NListItem v-for="item in projects" :key="item.id">
+                <NButton
+                  block
+                  :type="project?.id === item.id ? 'primary' : 'default'"
+                  :secondary="project?.id === item.id"
+                  :quaternary="project?.id !== item.id"
+                  @click="selectProject(item)"
+                >
+                  <span class="mr-8px max-w-150px truncate" :title="item.partNo">{{ item.partNo }}</span>
+                  <NTag size="small" round>{{ item.orderCount }}</NTag>
+                </NButton>
+              </NListItem>
+            </NList>
+          </NSpin>
+          <NPagination
+            v-if="projectTotal > pageSize"
+            :page="projectPage"
+            :page-size="pageSize"
+            :item-count="projectTotal"
+            :page-slot="3"
+            @update:page="loadProjects"
+          />
+        </NCard>
+
+        <NSpace vertical :size="16" class="min-w-0">
+          <NCard :title="project?.partNo ?? t('orders')" size="small">
+            <NSpin :show="loadingOrders">
+              <NEmpty v-if="!project" :description="t('selectProject')" />
+              <NEmpty v-else-if="!orders.length" :description="t('emptyOrders')" />
+              <div v-else class="overflow-x-auto">
+                <NTable size="small" :single-line="false">
+                  <thead>
+                    <tr>
+                      <th>{{ t('orderNo') }}</th>
+                      <th>{{ t('orderName') }}</th>
+                      <th>{{ t('tickets') }}</th>
+                      <th>{{ $t('common.action') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in orders" :key="item.id">
+                      <td class="font-mono">{{ item.orderNo }}</td>
+                      <td>{{ item.name }}</td>
+                      <td>{{ item.ticketCount }}</td>
+                      <td>
+                        <NSpace :wrap="false">
+                          <NButton size="tiny" secondary @click="copyOrder(item.orderNo)">{{ t('copyOrder') }}</NButton>
+                          <NButton
+                            size="tiny"
+                            :type="order?.id === item.id ? 'primary' : 'default'"
+                            @click="selectOrder(item)"
+                          >
+                            {{ t('viewTickets') }}
+                          </NButton>
+                        </NSpace>
+                      </td>
+                    </tr>
+                  </tbody>
+                </NTable>
               </div>
-              <NSwitch v-model:value="onlyUnassigned">
-                <template #checked>{{ $t('page.work_ticket_management.workflow.onlyUnassigned') }}</template>
-                <template #unchecked>{{ $t('page.work_ticket_management.workflow.showAllTickets') }}</template>
-              </NSwitch>
-            </div>
-            <div class="max-h-full overflow-y-auto pr-4px">
-              <NEmpty
-                v-if="!candidates.length"
-                :description="$t('page.work_ticket_management.workflow.noCandidates')"
-              />
-              <NCard v-for="order in candidates" :key="order.id" :bordered="true" size="small" class="mb-12px">
-                <template #header>
-                  <div class="flex flex-wrap items-center gap-8px">
-                    <span class="text-15px font-600">{{ order.orderNo }}</span>
-                    <NTag
-                      size="small"
-                      :bordered="false"
-                      :type="order.mappingStatus === 'confirmed' ? 'success' : 'warning'"
-                    >
-                      {{ mappingStatusLabels[order.mappingStatus] }}
-                    </NTag>
-                  </div>
-                </template>
-                <div class="grid grid-cols-1 gap-x-20px gap-y-6px text-13px sm:grid-cols-2">
-                  <div>
-                    <span class="text-gray">{{ $t('page.work_ticket_management.workflow.partNo') }}：</span>
-                    {{ order.partNo }}
-                  </div>
-                  <div>
-                    <span class="text-gray">{{ $t('page.work_ticket_management.workflow.name') }}：</span>
-                    {{ order.name }}
-                  </div>
-                  <div>
-                    <span class="text-gray">{{ $t('page.work_ticket_management.workflow.quantity') }}：</span>
-                    {{ order.quantity ?? '—' }}
-                  </div>
-                  <div>
-                    <span class="text-gray">{{ $t('page.work_ticket_management.workflow.receivedQuantity') }}：</span>
-                    {{ order.receivedQuantity ?? '—' }}
-                  </div>
-                </div>
-                <div class="mt-12px flex flex-wrap justify-end gap-8px">
-                  <NButton size="small" secondary @click="copyOrderNo(order.orderNo)">
-                    {{ $t('page.work_ticket_management.workflow.copyOrderNo') }}
-                  </NButton>
-                  <NButton size="small" type="primary" @click="openTicket(order)">
-                    {{ $t('page.work_ticket_management.workflow.enterTicketCode') }}
-                  </NButton>
-                </div>
-                <NDivider class="my-12px" />
-                <div class="mb-8px text-13px font-600">{{ $t('page.work_ticket_management.workflow.ticket') }}</div>
-                <NEmpty
-                  v-if="!ticketsForOrder(order.id).length"
-                  :description="
-                    $t(
-                      onlyUnassigned
-                        ? 'page.work_ticket_management.workflow.noUnassignedTicket'
-                        : 'page.work_ticket_management.workflow.noTicket'
-                    )
-                  "
-                  size="small"
-                />
-                <NDataTable
-                  v-else
-                  :columns="ticketColumns"
-                  :data="ticketsForOrder(order.id)"
-                  :row-key="ticket => ticket.id"
-                  size="small"
-                  :scroll-x="700"
-                />
-              </NCard>
-            </div>
-          </template>
-        </NCard>
-      </NGi>
-    </NGrid>
+            </NSpin>
+            <NPagination
+              v-if="project && orderTotal > pageSize"
+              class="mt-12px"
+              :page="orderPage"
+              :page-size="pageSize"
+              :item-count="orderTotal"
+              @update:page="page => project && selectProject(project, page)"
+            />
+          </NCard>
 
-    <NModal
-      v-model:show="importVisible"
-      preset="card"
-      :title="
-        $t(
-          importSource === 'plan'
-            ? 'page.work_ticket_management.workflow.importPlan'
-            : 'page.work_ticket_management.workflow.importActual'
-        )
-      "
-      class="w-760px max-w-95vw"
-    >
-      <NSpace vertical>
-        <NAlert type="info" :show-icon="false">
-          {{ $t('page.work_ticket_management.workflow.importProjectHint') }}
-        </NAlert>
-        <NUpload accept=".xlsx" :max="1" :custom-request="previewFile" :show-file-list="true">
-          <NButton :loading="importBusy">{{ $t('page.work_ticket_management.workflow.chooseExcel') }}</NButton>
-        </NUpload>
-        <template v-if="importPreview">
-          <NAlert type="info" :show-icon="false">
-            {{
-              $t('page.work_ticket_management.workflow.importPreviewSummary', {
-                total: importPreview.totalRows,
-                added: importPreview.totalRows - importPreview.duplicateRows - importPreview.invalidRows,
-                duplicates: importPreview.duplicateRows,
-                invalid: importPreview.invalidRows
-              })
-            }}
-          </NAlert>
-          <NDataTable
-            :columns="previewColumns"
-            :data="importPreview.rows"
-            :max-height="320"
-            :scroll-x="600"
-            size="small"
-          />
-          <div class="flex justify-end">
-            <NButton type="primary" :loading="importBusy" @click="commitImport">
-              {{ $t('page.work_ticket_management.workflow.importConfirm') }}
-            </NButton>
-          </div>
-        </template>
-      </NSpace>
-    </NModal>
-
-    <NModal
-      v-model:show="ticketVisible"
-      preset="card"
-      :title="$t('page.work_ticket_management.workflow.enterTicketCode')"
-      class="w-560px max-w-95vw"
-    >
-      <NSpace vertical :size="16">
-        <NAlert type="info" :show-icon="false">
-          {{ $t('page.work_ticket_management.workflow.externalTicketCodeHint') }}
-        </NAlert>
-        <NForm label-placement="top">
-          <NFormItem :label="$t('page.work_ticket_management.workflow.orderNo')">
-            <NSpace class="w-full" align="center" :wrap="false">
-              <NInput :value="selectedOrder?.orderNo" readonly class="flex-1" />
-              <NButton secondary @click="selectedOrder && copyOrderNo(selectedOrder.orderNo)">
-                {{ $t('page.work_ticket_management.workflow.copyOrderNo') }}
+          <NCard v-if="order" :title="`${order.orderNo} · ${t('tickets')}`" size="small">
+            <template #header-extra>
+              <NButton v-if="canEditTickets" type="primary" size="small" @click="openTicket()">
+                {{ t('addTicket') }}
               </NButton>
-            </NSpace>
-          </NFormItem>
-          <NFormItem :label="$t('page.work_ticket_management.workflow.ticketCode')" required>
-            <NInput
-              v-model:value="ticketForm.code"
-              :placeholder="$t('page.work_ticket_management.workflow.pasteTicketCode')"
-            />
-          </NFormItem>
-          <NFormItem :label="$t('page.work_ticket_management.workflow.ocr')">
-            <OcrRecognizer @recognized="onOcrRecognized" />
-          </NFormItem>
-        </NForm>
-      </NSpace>
-      <template #footer>
-        <NSpace justify="end">
-          <NButton @click="ticketVisible = false">{{ $t('page.work_ticket_management.workflow.cancel') }}</NButton>
-          <NButton type="primary" :loading="ticketSaving" @click="saveTicket">
-            {{ $t('page.work_ticket_management.workflow.save') }}
-          </NButton>
+            </template>
+            <NSpin :show="loadingTickets">
+              <NEmpty v-if="!tickets.length" :description="t('emptyTickets')" />
+              <NSpace v-else vertical :size="12">
+                <NCard v-for="item in tickets" :key="item.id" embedded size="small">
+                  <template #header>
+                    <NSpace align="center">
+                      <span class="font-mono">{{ item.ticketCode }}</span>
+                      <NTag v-if="!item.allocations.length" size="small" type="warning">{{ t('unassigned') }}</NTag>
+                    </NSpace>
+                  </template>
+                  <template #header-extra>
+                    <NSpace>
+                      <NButton v-if="canEditTickets" size="tiny" secondary @click="openTicket(item)">
+                        {{ $t('common.edit') }}
+                      </NButton>
+                      <NButton v-if="canAllocate" size="tiny" type="primary" secondary @click="openAllocation(item)">
+                        {{ t('allocate') }}
+                      </NButton>
+                    </NSpace>
+                  </template>
+                  <NSpace class="mb-8px" align="center">
+                    <span>{{ t('totalHours') }} {{ item.totalHours ?? '—' }}</span>
+                    <span>{{ t('assignedHours') }} {{ item.assignedHours }}</span>
+                    <span v-if="item.totalHours !== null">
+                      {{ t('remainingHours') }} {{ (Number(item.totalHours) - Number(item.assignedHours)).toFixed(2) }}
+                    </span>
+                  </NSpace>
+                  <NTable v-if="item.allocations.length" size="small">
+                    <thead>
+                      <tr>
+                        <th>{{ t('worker') }}</th>
+                        <th>{{ t('assignedOn') }}</th>
+                        <th>{{ t('hours') }}</th>
+                        <th v-if="canAllocate">{{ $t('common.action') }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="record in item.allocations" :key="record.id">
+                        <td>{{ record.workerName }}</td>
+                        <td>{{ record.assignedOn }}</td>
+                        <td>{{ record.hours ?? '—' }}</td>
+                        <td v-if="canAllocate">
+                          <NButton size="tiny" text @click="openAllocation(item, record)">
+                            {{ $t('common.edit') }}
+                          </NButton>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </NTable>
+                </NCard>
+              </NSpace>
+            </NSpin>
+          </NCard>
         </NSpace>
-      </template>
-    </NModal>
+      </div>
+    </NTabPane>
 
-    <NModal
-      v-model:show="assignmentVisible"
-      preset="card"
-      :title="$t('page.work_ticket_management.workflow.assignWorkers')"
-      class="w-560px max-w-95vw"
-    >
-      <NSpace vertical :size="16">
-        <NAlert type="info" :show-icon="false">
-          {{ $t('page.work_ticket_management.workflow.assignHint') }}
-        </NAlert>
-        <NForm label-placement="top">
-          <NFormItem :label="$t('page.work_ticket_management.workflow.ticketCode')">
-            <NInput :value="assigningTicket?.ticketCode || '—'" readonly />
-          </NFormItem>
-          <NFormItem :label="$t('page.work_ticket_management.workflow.worker')" required>
-            <NSelect
-              v-model:value="assignmentWorkerIds"
-              multiple
-              filterable
-              clearable
-              max-tag-count="responsive"
-              :options="
-                workers.filter(worker => worker.enabled).map(worker => ({ label: worker.name, value: worker.id }))
-              "
-              :placeholder="$t('page.work_ticket_management.workflow.noWorkers')"
-            />
-          </NFormItem>
-        </NForm>
+    <NTabPane name="report" :tab="t('report')">
+      <AssetReport />
+    </NTabPane>
+  </NTabs>
+
+  <ExcelImportPreview
+    v-if="importFile"
+    :file="importFile"
+    :preview-api="fetchPreviewImportWorkProject"
+    :import-api="importProjects"
+    @close="importFile = null"
+  />
+
+  <NModal
+    v-model:show="ticketVisible"
+    preset="card"
+    class="max-w-640px w-95vw"
+    :title="editingTicket ? t('editTicket') : t('addTicket')"
+    :mask-closable="!ticketBusy"
+    :close-on-esc="!ticketBusy"
+  >
+    <NForm>
+      <NFormItem :label="t('ticketCode')">
+        <NInput
+          v-model:value="ticketForm.ticketCode"
+          :maxlength="100"
+          :placeholder="t('ticketCodePlaceholder')"
+          @update:value="ticketForm.codeSource = 'manual'"
+        />
+      </NFormItem>
+      <NFormItem :label="t('totalHours')">
+        <NInputNumber v-model:value="ticketForm.totalHours" :min="0" :max="99999.99" :precision="2" clearable />
+      </NFormItem>
+      <NButton v-if="canUseOcr" secondary @click="showOcr = !showOcr">{{ t('ocr') }}</NButton>
+      <NSpace v-if="showOcr" vertical class="mt-12px">
+        <OcrRecognizer @recognized="ocrRecognized" />
+        <NSelect
+          v-if="ocrOptions.length"
+          :options="ocrOptions"
+          :placeholder="t('chooseOcr')"
+          @update:value="
+            code => {
+              ticketForm.ticketCode = code;
+              ticketForm.codeSource = 'ocr';
+            }
+          "
+        />
       </NSpace>
-      <template #footer>
-        <NSpace justify="end">
-          <NButton @click="assignmentVisible = false">{{ $t('page.work_ticket_management.workflow.cancel') }}</NButton>
-          <NButton
-            type="primary"
-            :disabled="!assignmentWorkerIds.length"
-            :loading="assignmentSaving"
-            @click="saveAssignment"
-          >
-            {{ $t('page.work_ticket_management.workflow.assignWorkers') }}
-          </NButton>
-        </NSpace>
-      </template>
-    </NModal>
-  </div>
+    </NForm>
+    <template #footer>
+      <NButton type="primary" :loading="ticketBusy" :disabled="!ticketForm.ticketCode.trim()" @click="saveTicket">
+        {{ t('save') }}
+      </NButton>
+    </template>
+  </NModal>
+
+  <NModal
+    :show="Boolean(allocation)"
+    preset="card"
+    class="max-w-440px w-95vw"
+    :title="t('allocate')"
+    :mask-closable="!allocationBusy"
+    :close-on-esc="!allocationBusy"
+    @update:show="value => !value && !allocationBusy && (allocation = null)"
+  >
+    <NForm>
+      <NFormItem :label="t('worker')">
+        <NSelect v-model:value="assignedWorker" :options="workerOptions" filterable :placeholder="t('worker')" />
+      </NFormItem>
+      <NFormItem :label="t('assignedOn')">
+        <NDatePicker v-model:formatted-value="assignedOn" type="date" value-format="yyyy-MM-dd" />
+      </NFormItem>
+      <NFormItem :label="t('hours')">
+        <NInputNumber v-model:value="assignedHours" :min="0" :max="99999.99" :precision="2" clearable />
+      </NFormItem>
+    </NForm>
+    <template #footer>
+      <NButton
+        type="primary"
+        :loading="allocationBusy"
+        :disabled="!assignedWorker || !assignedOn"
+        @click="saveAllocation"
+      >
+        {{ t('save') }}
+      </NButton>
+    </template>
+  </NModal>
 </template>

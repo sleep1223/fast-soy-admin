@@ -437,3 +437,68 @@ class WorkMonthStatusLog(BaseModel, AuditMixin):
     class Meta:
         table = "biz_work_ticket_management_work_month_status_log"
         table_description = "月度状态日志"
+
+
+class WorkProject(BaseModel, AuditMixin):
+    """项目资产"""
+
+    id = fields.IntField(primary_key=True)
+    owner_id = fields.IntField(description="资产所属账号")
+    part_no = fields.CharField(max_length=200, description="项目号")
+
+    class Meta:
+        table = "biz_work_ticket_management_project"
+        table_description = "项目资产"
+        unique_together = (("owner_id", "part_no"),)
+
+
+class WorkProjectOrder(BaseModel, AuditMixin):
+    """项目订单资产"""
+
+    id = fields.IntField(primary_key=True)
+    project_id: int
+    project = fields.ForeignKeyField("app_system.WorkProject", related_name="asset_orders", on_delete=fields.RESTRICT, description="项目")
+    order_id: int | None
+    order = fields.ForeignKeyField("app_system.Order", null=True, related_name="work_project_assets", on_delete=fields.SET_NULL, description="来源订单")
+    order_no = fields.CharField(max_length=100, description="订单号")
+    name = fields.CharField(max_length=200, description="订单名称")
+
+    class Meta:
+        table = "biz_work_ticket_management_project_order"
+        table_description = "项目订单资产"
+        unique_together = (("project", "order_no"),)
+
+
+class WorkAssetTicket(BaseModel, AuditMixin):
+    """订单工票"""
+
+    id = fields.IntField(primary_key=True)
+    project_order_id: int
+    project_order = fields.ForeignKeyField("app_system.WorkProjectOrder", related_name="asset_tickets", on_delete=fields.RESTRICT, description="项目订单")
+    ticket_code = fields.CharField(max_length=100, description="外部工票码")
+    ticket_code_key = fields.CharField(max_length=100, description="工票码比较键")
+    code_source = fields.CharEnumField(TicketCodeSource, default=TicketCodeSource.manual, max_length=10, description="工票码来源")
+    total_hours = fields.DecimalField(max_digits=7, decimal_places=2, null=True, description="工票总工时")
+    allocations: fields.ReverseRelation[WorkAssetAllocation]
+
+    class Meta:
+        table = "biz_work_ticket_management_asset_ticket"
+        table_description = "订单工票"
+        unique_together = (("project_order", "ticket_code_key"),)
+
+
+class WorkAssetAllocation(BaseModel, AuditMixin):
+    """工票人员分配与工时"""
+
+    id = fields.IntField(primary_key=True)
+    ticket_id: int
+    ticket = fields.ForeignKeyField("app_system.WorkAssetTicket", related_name="allocations", on_delete=fields.RESTRICT, description="工票")
+    worker_id: int
+    worker: fields.ForeignKeyRelation[Worker] = fields.ForeignKeyField("app_system.Worker", related_name="asset_allocations", on_delete=fields.RESTRICT, description="人员")
+    assigned_on = fields.DateField(db_index=True, description="分配日期")
+    hours = fields.DecimalField(max_digits=7, decimal_places=2, null=True, description="分配工时")
+
+    class Meta:
+        table = "biz_work_ticket_management_asset_allocation"
+        table_description = "工票人员分配与工时"
+        unique_together = (("ticket", "worker", "assigned_on"),)

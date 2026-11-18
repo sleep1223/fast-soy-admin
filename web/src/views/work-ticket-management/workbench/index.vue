@@ -216,249 +216,254 @@ onMounted(() => loadProjects());
 </script>
 
 <template>
-  <NTabs type="line" animated class="min-h-0">
-    <NTabPane name="assets" :tab="t('assets')">
-      <div class="grid gap-16px xl:grid-cols-[18rem_minmax(0,1fr)]">
-        <NCard :title="t('projects')" size="small">
-          <template #header-extra>
-            <label v-if="canImport" class="relative inline-block">
-              <NButton tag="span" size="small" type="primary" secondary>{{ t('import') }}</NButton>
-              <input
-                type="file"
-                accept=".xlsx"
-                :aria-label="t('import')"
-                class="absolute inset-0 size-full cursor-pointer opacity-0"
-                @change="readFile"
-              />
-            </label>
-          </template>
+  <div>
+    <NTabs type="line" animated class="min-h-0">
+      <NTabPane name="assets" :tab="t('assets')">
+        <div class="grid gap-16px xl:grid-cols-[18rem_minmax(0,1fr)]">
+          <NCard :title="t('projects')" size="small">
+            <template #header-extra>
+              <label v-if="canImport" class="relative inline-block">
+                <NButton tag="span" size="small" type="primary" secondary>{{ t('import') }}</NButton>
+                <input
+                  type="file"
+                  accept=".xlsx"
+                  :aria-label="t('import')"
+                  class="absolute inset-0 size-full cursor-pointer opacity-0"
+                  @change="readFile"
+                />
+              </label>
+            </template>
 
-          <NInputGroup>
-            <NInput v-model:value="keyword" clearable :placeholder="t('partNo')" @keyup.enter="loadProjects(1)" />
-            <NButton @click="loadProjects(1)">{{ $t('common.search') }}</NButton>
-          </NInputGroup>
-          <NSpin :show="loadingProjects" class="my-12px">
-            <NEmpty v-if="!projects.length" :description="t('emptyProjects')" />
-            <NList v-else hoverable clickable>
-              <NListItem v-for="item in projects" :key="item.id">
-                <NButton
-                  block
-                  :type="project?.id === item.id ? 'primary' : 'default'"
-                  :secondary="project?.id === item.id"
-                  :quaternary="project?.id !== item.id"
-                  @click="selectProject(item)"
-                >
-                  <span class="mr-8px max-w-150px truncate" :title="item.partNo">{{ item.partNo }}</span>
-                  <NTag size="small" round>{{ item.orderCount }}</NTag>
-                </NButton>
-              </NListItem>
-            </NList>
-          </NSpin>
-          <NPagination
-            v-if="projectTotal > pageSize"
-            :page="projectPage"
-            :page-size="pageSize"
-            :item-count="projectTotal"
-            :page-slot="3"
-            @update:page="loadProjects"
-          />
-        </NCard>
-
-        <NSpace vertical :size="16" class="min-w-0">
-          <NCard :title="project?.partNo ?? t('orders')" size="small">
-            <NSpin :show="loadingOrders">
-              <NEmpty v-if="!project" :description="t('selectProject')" />
-              <NEmpty v-else-if="!orders.length" :description="t('emptyOrders')" />
-              <div v-else class="overflow-x-auto">
-                <NTable size="small" :single-line="false">
-                  <thead>
-                    <tr>
-                      <th>{{ t('orderNo') }}</th>
-                      <th>{{ t('orderName') }}</th>
-                      <th>{{ t('tickets') }}</th>
-                      <th>{{ $t('common.action') }}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="item in orders" :key="item.id">
-                      <td class="font-mono">{{ item.orderNo }}</td>
-                      <td>{{ item.name }}</td>
-                      <td>{{ item.ticketCount }}</td>
-                      <td>
-                        <NSpace :wrap="false">
-                          <NButton size="tiny" secondary @click="copyOrder(item.orderNo)">{{ t('copyOrder') }}</NButton>
-                          <NButton
-                            size="tiny"
-                            :type="order?.id === item.id ? 'primary' : 'default'"
-                            @click="selectOrder(item)"
-                          >
-                            {{ t('viewTickets') }}
-                          </NButton>
-                        </NSpace>
-                      </td>
-                    </tr>
-                  </tbody>
-                </NTable>
-              </div>
+            <NInputGroup>
+              <NInput v-model:value="keyword" clearable :placeholder="t('partNo')" @keyup.enter="loadProjects(1)" />
+              <NButton @click="loadProjects(1)">{{ $t('common.search') }}</NButton>
+            </NInputGroup>
+            <NSpin :show="loadingProjects" class="my-12px">
+              <NEmpty v-if="!projects.length" :description="t('emptyProjects')" />
+              <NList v-else hoverable clickable>
+                <NListItem v-for="item in projects" :key="item.id">
+                  <NButton
+                    block
+                    :type="project?.id === item.id ? 'primary' : 'default'"
+                    :secondary="project?.id === item.id"
+                    :quaternary="project?.id !== item.id"
+                    @click="selectProject(item)"
+                  >
+                    <span class="mr-8px max-w-150px truncate" :title="item.partNo">{{ item.partNo }}</span>
+                    <NTag size="small" round>{{ item.orderCount }}</NTag>
+                  </NButton>
+                </NListItem>
+              </NList>
             </NSpin>
             <NPagination
-              v-if="project && orderTotal > pageSize"
-              class="mt-12px"
-              :page="orderPage"
+              v-if="projectTotal > pageSize"
+              :page="projectPage"
               :page-size="pageSize"
-              :item-count="orderTotal"
-              @update:page="page => project && selectProject(project, page)"
+              :item-count="projectTotal"
+              :page-slot="3"
+              @update:page="loadProjects"
             />
           </NCard>
 
-          <NCard v-if="order" :title="`${order.orderNo} · ${t('tickets')}`" size="small">
-            <template #header-extra>
-              <NButton v-if="canEditTickets" type="primary" size="small" @click="openTicket()">
-                {{ t('addTicket') }}
-              </NButton>
-            </template>
-            <NSpin :show="loadingTickets">
-              <NEmpty v-if="!tickets.length" :description="t('emptyTickets')" />
-              <NSpace v-else vertical :size="12">
-                <NCard v-for="item in tickets" :key="item.id" embedded size="small">
-                  <template #header>
-                    <NSpace align="center">
-                      <span class="font-mono">{{ item.ticketCode }}</span>
-                      <NTag v-if="!item.allocations.length" size="small" type="warning">{{ t('unassigned') }}</NTag>
-                    </NSpace>
-                  </template>
-                  <template #header-extra>
-                    <NSpace>
-                      <NButton v-if="canEditTickets" size="tiny" secondary @click="openTicket(item)">
-                        {{ $t('common.edit') }}
-                      </NButton>
-                      <NButton v-if="canAllocate" size="tiny" type="primary" secondary @click="openAllocation(item)">
-                        {{ t('allocate') }}
-                      </NButton>
-                    </NSpace>
-                  </template>
-                  <NSpace class="mb-8px" align="center">
-                    <span>{{ t('totalHours') }} {{ item.totalHours ?? '—' }}</span>
-                    <span>{{ t('assignedHours') }} {{ item.assignedHours }}</span>
-                    <span v-if="item.totalHours !== null">
-                      {{ t('remainingHours') }} {{ (Number(item.totalHours) - Number(item.assignedHours)).toFixed(2) }}
-                    </span>
-                  </NSpace>
-                  <NTable v-if="item.allocations.length" size="small">
+          <NSpace vertical :size="16" class="min-w-0">
+            <NCard :title="project?.partNo ?? t('orders')" size="small">
+              <NSpin :show="loadingOrders">
+                <NEmpty v-if="!project" :description="t('selectProject')" />
+                <NEmpty v-else-if="!orders.length" :description="t('emptyOrders')" />
+                <div v-else class="overflow-x-auto">
+                  <NTable size="small" :single-line="false">
                     <thead>
                       <tr>
-                        <th>{{ t('worker') }}</th>
-                        <th>{{ t('assignedOn') }}</th>
-                        <th>{{ t('hours') }}</th>
-                        <th v-if="canAllocate">{{ $t('common.action') }}</th>
+                        <th>{{ t('orderNo') }}</th>
+                        <th>{{ t('orderName') }}</th>
+                        <th>{{ t('tickets') }}</th>
+                        <th>{{ $t('common.action') }}</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr v-for="record in item.allocations" :key="record.id">
-                        <td>{{ record.workerName }}</td>
-                        <td>{{ record.assignedOn }}</td>
-                        <td>{{ record.hours ?? '—' }}</td>
-                        <td v-if="canAllocate">
-                          <NButton size="tiny" text @click="openAllocation(item, record)">
-                            {{ $t('common.edit') }}
-                          </NButton>
+                      <tr v-for="item in orders" :key="item.id">
+                        <td class="font-mono">{{ item.orderNo }}</td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.ticketCount }}</td>
+                        <td>
+                          <NSpace :wrap="false">
+                            <NButton size="tiny" secondary @click="copyOrder(item.orderNo)">
+                              {{ t('copyOrder') }}
+                            </NButton>
+                            <NButton
+                              size="tiny"
+                              :type="order?.id === item.id ? 'primary' : 'default'"
+                              @click="selectOrder(item)"
+                            >
+                              {{ t('viewTickets') }}
+                            </NButton>
+                          </NSpace>
                         </td>
                       </tr>
                     </tbody>
                   </NTable>
-                </NCard>
-              </NSpace>
-            </NSpin>
-          </NCard>
+                </div>
+              </NSpin>
+              <NPagination
+                v-if="project && orderTotal > pageSize"
+                class="mt-12px"
+                :page="orderPage"
+                :page-size="pageSize"
+                :item-count="orderTotal"
+                @update:page="page => project && selectProject(project, page)"
+              />
+            </NCard>
+
+            <NCard v-if="order" :title="`${order.orderNo} · ${t('tickets')}`" size="small">
+              <template #header-extra>
+                <NButton v-if="canEditTickets" type="primary" size="small" @click="openTicket()">
+                  {{ t('addTicket') }}
+                </NButton>
+              </template>
+              <NSpin :show="loadingTickets">
+                <NEmpty v-if="!tickets.length" :description="t('emptyTickets')" />
+                <NSpace v-else vertical :size="12">
+                  <NCard v-for="item in tickets" :key="item.id" embedded size="small">
+                    <template #header>
+                      <NSpace align="center">
+                        <span class="font-mono">{{ item.ticketCode }}</span>
+                        <NTag v-if="!item.allocations.length" size="small" type="warning">{{ t('unassigned') }}</NTag>
+                      </NSpace>
+                    </template>
+                    <template #header-extra>
+                      <NSpace>
+                        <NButton v-if="canEditTickets" size="tiny" secondary @click="openTicket(item)">
+                          {{ $t('common.edit') }}
+                        </NButton>
+                        <NButton v-if="canAllocate" size="tiny" type="primary" secondary @click="openAllocation(item)">
+                          {{ t('allocate') }}
+                        </NButton>
+                      </NSpace>
+                    </template>
+                    <NSpace class="mb-8px" align="center">
+                      <span>{{ t('totalHours') }} {{ item.totalHours ?? '—' }}</span>
+                      <span>{{ t('assignedHours') }} {{ item.assignedHours }}</span>
+                      <span v-if="item.totalHours !== null">
+                        {{ t('remainingHours') }}
+                        {{ (Number(item.totalHours) - Number(item.assignedHours)).toFixed(2) }}
+                      </span>
+                    </NSpace>
+                    <NTable v-if="item.allocations.length" size="small">
+                      <thead>
+                        <tr>
+                          <th>{{ t('worker') }}</th>
+                          <th>{{ t('assignedOn') }}</th>
+                          <th>{{ t('hours') }}</th>
+                          <th v-if="canAllocate">{{ $t('common.action') }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="record in item.allocations" :key="record.id">
+                          <td>{{ record.workerName }}</td>
+                          <td>{{ record.assignedOn }}</td>
+                          <td>{{ record.hours ?? '—' }}</td>
+                          <td v-if="canAllocate">
+                            <NButton size="tiny" text @click="openAllocation(item, record)">
+                              {{ $t('common.edit') }}
+                            </NButton>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </NTable>
+                  </NCard>
+                </NSpace>
+              </NSpin>
+            </NCard>
+          </NSpace>
+        </div>
+      </NTabPane>
+
+      <NTabPane name="report" :tab="t('report')">
+        <AssetReport />
+      </NTabPane>
+    </NTabs>
+
+    <ExcelImportPreview
+      v-if="importFile"
+      :file="importFile"
+      :preview-api="fetchPreviewImportWorkProject"
+      :import-api="importProjects"
+      @close="importFile = null"
+    />
+
+    <NModal
+      v-model:show="ticketVisible"
+      preset="card"
+      class="max-w-640px w-95vw"
+      :title="editingTicket ? t('editTicket') : t('addTicket')"
+      :mask-closable="!ticketBusy"
+      :close-on-esc="!ticketBusy"
+    >
+      <NForm>
+        <NFormItem :label="t('ticketCode')">
+          <NInput
+            v-model:value="ticketForm.ticketCode"
+            :maxlength="100"
+            :placeholder="t('ticketCodePlaceholder')"
+            @update:value="ticketForm.codeSource = 'manual'"
+          />
+        </NFormItem>
+        <NFormItem :label="t('totalHours')">
+          <NInputNumber v-model:value="ticketForm.totalHours" :min="0" :max="99999.99" :precision="2" clearable />
+        </NFormItem>
+        <NButton v-if="canUseOcr" secondary @click="showOcr = !showOcr">{{ t('ocr') }}</NButton>
+        <NSpace v-if="showOcr" vertical class="mt-12px">
+          <OcrRecognizer @recognized="ocrRecognized" />
+          <NSelect
+            v-if="ocrOptions.length"
+            :options="ocrOptions"
+            :placeholder="t('chooseOcr')"
+            @update:value="
+              code => {
+                ticketForm.ticketCode = code;
+                ticketForm.codeSource = 'ocr';
+              }
+            "
+          />
         </NSpace>
-      </div>
-    </NTabPane>
+      </NForm>
+      <template #footer>
+        <NButton type="primary" :loading="ticketBusy" :disabled="!ticketForm.ticketCode.trim()" @click="saveTicket">
+          {{ t('save') }}
+        </NButton>
+      </template>
+    </NModal>
 
-    <NTabPane name="report" :tab="t('report')">
-      <AssetReport />
-    </NTabPane>
-  </NTabs>
-
-  <ExcelImportPreview
-    v-if="importFile"
-    :file="importFile"
-    :preview-api="fetchPreviewImportWorkProject"
-    :import-api="importProjects"
-    @close="importFile = null"
-  />
-
-  <NModal
-    v-model:show="ticketVisible"
-    preset="card"
-    class="max-w-640px w-95vw"
-    :title="editingTicket ? t('editTicket') : t('addTicket')"
-    :mask-closable="!ticketBusy"
-    :close-on-esc="!ticketBusy"
-  >
-    <NForm>
-      <NFormItem :label="t('ticketCode')">
-        <NInput
-          v-model:value="ticketForm.ticketCode"
-          :maxlength="100"
-          :placeholder="t('ticketCodePlaceholder')"
-          @update:value="ticketForm.codeSource = 'manual'"
-        />
-      </NFormItem>
-      <NFormItem :label="t('totalHours')">
-        <NInputNumber v-model:value="ticketForm.totalHours" :min="0" :max="99999.99" :precision="2" clearable />
-      </NFormItem>
-      <NButton v-if="canUseOcr" secondary @click="showOcr = !showOcr">{{ t('ocr') }}</NButton>
-      <NSpace v-if="showOcr" vertical class="mt-12px">
-        <OcrRecognizer @recognized="ocrRecognized" />
-        <NSelect
-          v-if="ocrOptions.length"
-          :options="ocrOptions"
-          :placeholder="t('chooseOcr')"
-          @update:value="
-            code => {
-              ticketForm.ticketCode = code;
-              ticketForm.codeSource = 'ocr';
-            }
-          "
-        />
-      </NSpace>
-    </NForm>
-    <template #footer>
-      <NButton type="primary" :loading="ticketBusy" :disabled="!ticketForm.ticketCode.trim()" @click="saveTicket">
-        {{ t('save') }}
-      </NButton>
-    </template>
-  </NModal>
-
-  <NModal
-    :show="Boolean(allocation)"
-    preset="card"
-    class="max-w-440px w-95vw"
-    :title="t('allocate')"
-    :mask-closable="!allocationBusy"
-    :close-on-esc="!allocationBusy"
-    @update:show="value => !value && !allocationBusy && (allocation = null)"
-  >
-    <NForm>
-      <NFormItem :label="t('worker')">
-        <NSelect v-model:value="assignedWorker" :options="workerOptions" filterable :placeholder="t('worker')" />
-      </NFormItem>
-      <NFormItem :label="t('assignedOn')">
-        <NDatePicker v-model:formatted-value="assignedOn" type="date" value-format="yyyy-MM-dd" />
-      </NFormItem>
-      <NFormItem :label="t('hours')">
-        <NInputNumber v-model:value="assignedHours" :min="0" :max="99999.99" :precision="2" clearable />
-      </NFormItem>
-    </NForm>
-    <template #footer>
-      <NButton
-        type="primary"
-        :loading="allocationBusy"
-        :disabled="!assignedWorker || !assignedOn"
-        @click="saveAllocation"
-      >
-        {{ t('save') }}
-      </NButton>
-    </template>
-  </NModal>
+    <NModal
+      :show="Boolean(allocation)"
+      preset="card"
+      class="max-w-440px w-95vw"
+      :title="t('allocate')"
+      :mask-closable="!allocationBusy"
+      :close-on-esc="!allocationBusy"
+      @update:show="value => !value && !allocationBusy && (allocation = null)"
+    >
+      <NForm>
+        <NFormItem :label="t('worker')">
+          <NSelect v-model:value="assignedWorker" :options="workerOptions" filterable :placeholder="t('worker')" />
+        </NFormItem>
+        <NFormItem :label="t('assignedOn')">
+          <NDatePicker v-model:formatted-value="assignedOn" type="date" value-format="yyyy-MM-dd" />
+        </NFormItem>
+        <NFormItem :label="t('hours')">
+          <NInputNumber v-model:value="assignedHours" :min="0" :max="99999.99" :precision="2" clearable />
+        </NFormItem>
+      </NForm>
+      <template #footer>
+        <NButton
+          type="primary"
+          :loading="allocationBusy"
+          :disabled="!assignedWorker || !assignedOn"
+          @click="saveAllocation"
+        >
+          {{ t('save') }}
+        </NButton>
+      </template>
+    </NModal>
+  </div>
 </template>

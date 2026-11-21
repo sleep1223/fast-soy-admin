@@ -21,6 +21,9 @@ declare module "@elegant-router/types" {
     "404": "/404";
     "500": "/500";
     "home": "/home";
+    "labor-management": "/labor-management";
+    "labor-management_labor-work-hour": "/labor-management/labor-work-hour";
+    "labor-management_labor-worker": "/labor-management/labor-worker";
     "login": "/login/:module(pwd-login|code-login|register|reset-pwd|bind-wechat)?";
     "manage": "/manage";
     "manage_api": "/manage/api";
@@ -77,6 +80,7 @@ declare module "@elegant-router/types" {
     | "404"
     | "500"
     | "home"
+    | "labor-management"
     | "login"
     | "manage"
     | "order-management"
@@ -103,6 +107,8 @@ declare module "@elegant-router/types" {
     | "500"
     | "login"
     | "home"
+    | "labor-management_labor-work-hour"
+    | "labor-management_labor-worker"
     | "manage_api"
     | "manage_codegen"
     | "manage_menu"

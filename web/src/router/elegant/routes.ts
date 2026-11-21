@@ -49,6 +49,35 @@ export const generatedRoutes: GeneratedRoute[] = [
     }
   },
   {
+    name: 'labor-management',
+    path: '/labor-management',
+    component: 'layout.base',
+    meta: {
+      title: 'labor-management',
+      i18nKey: 'route.labor-management'
+    },
+    children: [
+      {
+        name: 'labor-management_labor-work-hour',
+        path: '/labor-management/labor-work-hour',
+        component: 'view.labor-management_labor-work-hour',
+        meta: {
+          title: 'labor-management_labor-work-hour',
+          i18nKey: 'route.labor-management_labor-work-hour'
+        }
+      },
+      {
+        name: 'labor-management_labor-worker',
+        path: '/labor-management/labor-worker',
+        component: 'view.labor-management_labor-worker',
+        meta: {
+          title: 'labor-management_labor-worker',
+          i18nKey: 'route.labor-management_labor-worker'
+        }
+      }
+    ]
+  },
+  {
     name: 'login',
     path: '/login/:module(pwd-login|code-login|register|reset-pwd|bind-wechat)?',
     component: 'layout.blank$view.login',

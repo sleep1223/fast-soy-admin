@@ -5,3 +5,4 @@ export * from './route';
 export * from './system-manage';
 export * from './order_management-manage';
 export * from './weighbridge_settlement-manage';
+export * from './labor_management-manage';

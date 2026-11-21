@@ -84,12 +84,7 @@ onMounted(async () => {
 
     <ImageLibrary ref="library" @add="openUpload" />
 
-    <NModal
-      v-model:show="uploadVisible"
-      preset="card"
-      :title="$t('imageTools.add')"
-      class="w-160 max-w-95vw"
-    >
+    <NModal v-model:show="uploadVisible" preset="card" :title="$t('imageTools.add')" class="w-160 max-w-95vw">
       <ImageUpload
         v-if="uploadVisible"
         v-model:value="uploadValue"

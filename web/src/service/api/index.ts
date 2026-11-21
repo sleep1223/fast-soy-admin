@@ -5,5 +5,3 @@ export * from './route';
 export * from './system-manage';
 export * from './order_management-manage';
 export * from './weighbridge_settlement-manage';
-export * from './work_ticket_management-manage';
-export * from './work_ticket_management-workflow';

@@ -49,7 +49,6 @@ export function fetchBatchDeleteOrder(data?: Api.OrderManagementManage.CommonBat
   });
 }
 
-
 export function fetchExportOrder(data?: Api.OrderManagementManage.OrderSearchParams & { ids?: string[] }) {
   return request<ExcelDownload>({ url: '/business/order_management/orders/export', method: 'post', data: data ?? {} });
 }
@@ -60,11 +59,22 @@ export function fetchOrderImportTemplate() {
 
 export function fetchPreviewImportOrder(file: File, options?: ExcelImportOptions) {
   const data = createExcelFormData(file, options);
-  return request<ExcelPreview>({ url: '/business/order_management/orders/import-preview', method: 'post', data, headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 });
+  return request<ExcelPreview>({
+    url: '/business/order_management/orders/import-preview',
+    method: 'post',
+    data,
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000
+  });
 }
 
 export function fetchImportOrder(file: File, options?: ExcelImportOptions) {
   const data = createExcelFormData(file, options);
-  return request<{ importedCount: number }>({ url: '/business/order_management/orders/import', method: 'post', data, headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 });
+  return request<{ importedCount: number }>({
+    url: '/business/order_management/orders/import',
+    method: 'post',
+    data,
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000
+  });
 }
-

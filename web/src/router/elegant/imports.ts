@@ -36,10 +36,4 @@ export const views: Record<LastLevelRouteKey, RouteComponent | (() => Promise<Ro
   "user-center": () => import("@/views/user-center/index.vue"),
   "weighbridge-settlement_settlement-rate": () => import("@/views/weighbridge-settlement/settlement-rate/index.vue"),
   "weighbridge-settlement_weighing-ticket": () => import("@/views/weighbridge-settlement/weighing-ticket/index.vue"),
-  "work-ticket-management_master-data": () => import("@/views/work-ticket-management/master-data/index.vue"),
-  "work-ticket-management_reconciliation": () => import("@/views/work-ticket-management/reconciliation/index.vue"),
-  "work-ticket-management_reports": () => import("@/views/work-ticket-management/reports/index.vue"),
-  "work-ticket-management_tickets": () => import("@/views/work-ticket-management/tickets/index.vue"),
-  "work-ticket-management_time-entries": () => import("@/views/work-ticket-management/time-entries/index.vue"),
-  "work-ticket-management_workbench": () => import("@/views/work-ticket-management/workbench/index.vue"),
 };

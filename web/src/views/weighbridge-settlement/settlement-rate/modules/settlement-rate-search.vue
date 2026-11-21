@@ -6,8 +6,6 @@ const booleanOptions = [
   { label: $t('common.yesOrNo.no'), value: false }
 ] as any;
 
-
-
 defineOptions({ name: 'SettlementRateSearch' });
 
 interface Emits {
@@ -17,7 +15,6 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 const model = defineModel<Api.WeighbridgeSettlementManage.SettlementRateSearchParams>('model', { required: true });
-
 
 function reset() {
   emit('reset');
@@ -34,10 +31,23 @@ function search() {
       <NCollapseItem :title="$t('common.search')" name="settlement-rate-search">
         <NForm :model="model" label-placement="left" :label-width="80" @submit.prevent="search">
           <NGrid responsive="screen" item-responsive>
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.weighbridge_settlement.settlement_rate.processName')" path="processName" class="pr-24px">
-              <NInput v-model:value="model.processName" :placeholder="$t('page.weighbridge_settlement.settlement_rate.form.processName')" />
+            <NFormItemGi
+              span="24 s:12 m:6"
+              :label="$t('page.weighbridge_settlement.settlement_rate.processName')"
+              path="processName"
+              class="pr-24px"
+            >
+              <NInput
+                v-model:value="model.processName"
+                :placeholder="$t('page.weighbridge_settlement.settlement_rate.form.processName')"
+              />
             </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" :label="$t('page.weighbridge_settlement.settlement_rate.enabled')" path="enabled" class="pr-24px">
+            <NFormItemGi
+              span="24 s:12 m:6"
+              :label="$t('page.weighbridge_settlement.settlement_rate.enabled')"
+              path="enabled"
+              class="pr-24px"
+            >
               <NSelect
                 :value="model.enabled as any"
                 :options="booleanOptions"

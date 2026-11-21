@@ -152,23 +152,12 @@ defineExpose({ refresh: () => getDataByPage(1) });
     <NCard :title="$t('imageTools.library')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <template #header-extra>
         <TableHeaderOperation v-model:columns="columnChecks" :loading="loading" @refresh="getData">
-          <NButton
-            v-if="hasAuth('B_SYSTEM_UPLOAD_CREATE')"
-            type="primary"
-            size="small"
-            @click="emit('add')"
-          >
+          <NButton v-if="hasAuth('B_SYSTEM_UPLOAD_CREATE')" type="primary" size="small" @click="emit('add')">
             {{ $t('imageTools.add') }}
           </NButton>
           <NPopconfirm v-if="canDelete" @positive-click="remove(selected)">
             <template #trigger>
-              <NButton
-                type="error"
-                ghost
-                size="small"
-                :disabled="!selected.length || deleting"
-                :loading="deleting"
-              >
+              <NButton type="error" ghost size="small" :disabled="!selected.length || deleting" :loading="deleting">
                 {{ $t('common.batchDelete') }}
               </NButton>
             </template>
@@ -198,7 +187,11 @@ defineExpose({ refresh: () => getDataByPage(1) });
         class="w-120 max-w-95vw"
         :mask-closable="!saving"
         :close-on-esc="!saving"
-        @update:show="show => { if (!show && !saving) editing = null; }"
+        @update:show="
+          show => {
+            if (!show && !saving) editing = null;
+          }
+        "
       >
         <NForm @submit.prevent="saveName">
           <NFormItem :label="$t('imageTools.name')" required>
@@ -214,7 +207,11 @@ defineExpose({ refresh: () => getDataByPage(1) });
         preset="card"
         :title="$t('imageTools.detail')"
         class="w-160 max-w-95vw"
-        @update:show="show => { if (!show) detail = null; }"
+        @update:show="
+          show => {
+            if (!show) detail = null;
+          }
+        "
       >
         <NSpace v-if="detail" vertical :size="16">
           <ImagePreview :value="detail.url" :width="240" :height="180" />
@@ -222,7 +219,9 @@ defineExpose({ refresh: () => getDataByPage(1) });
             <NDescriptionsItem :label="$t('imageTools.name')">{{ detail.name }}</NDescriptionsItem>
             <NDescriptionsItem :label="$t('imageTools.format')">{{ detail.mediaType }}</NDescriptionsItem>
             <NDescriptionsItem :label="$t('imageTools.fileSize')">{{ formatSize(detail.size) }}</NDescriptionsItem>
-            <NDescriptionsItem :label="$t('imageTools.dimensions')">{{ detail.width }} × {{ detail.height }}</NDescriptionsItem>
+            <NDescriptionsItem :label="$t('imageTools.dimensions')">
+              {{ detail.width }} × {{ detail.height }}
+            </NDescriptionsItem>
             <NDescriptionsItem :label="$t('imageTools.uploader')">{{ detail.uploader || '—' }}</NDescriptionsItem>
             <NDescriptionsItem :label="$t('imageTools.uploadTime')">{{ detail.fmtCreatedAt }}</NDescriptionsItem>
             <NDescriptionsItem :label="$t('imageTools.updateTime')">{{ detail.fmtUpdatedAt }}</NDescriptionsItem>

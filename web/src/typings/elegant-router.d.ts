@@ -42,13 +42,6 @@ declare module "@elegant-router/types" {
     "weighbridge-settlement": "/weighbridge-settlement";
     "weighbridge-settlement_settlement-rate": "/weighbridge-settlement/settlement-rate";
     "weighbridge-settlement_weighing-ticket": "/weighbridge-settlement/weighing-ticket";
-    "work-ticket-management": "/work-ticket-management";
-    "work-ticket-management_master-data": "/work-ticket-management/master-data";
-    "work-ticket-management_reconciliation": "/work-ticket-management/reconciliation";
-    "work-ticket-management_reports": "/work-ticket-management/reports";
-    "work-ticket-management_tickets": "/work-ticket-management/tickets";
-    "work-ticket-management_time-entries": "/work-ticket-management/time-entries";
-    "work-ticket-management_workbench": "/work-ticket-management/workbench";
   };
 
   /**
@@ -89,7 +82,6 @@ declare module "@elegant-router/types" {
     | "order-management"
     | "user-center"
     | "weighbridge-settlement"
-    | "work-ticket-management"
   >;
 
   /**
@@ -127,12 +119,6 @@ declare module "@elegant-router/types" {
     | "user-center"
     | "weighbridge-settlement_settlement-rate"
     | "weighbridge-settlement_weighing-ticket"
-    | "work-ticket-management_master-data"
-    | "work-ticket-management_reconciliation"
-    | "work-ticket-management_reports"
-    | "work-ticket-management_tickets"
-    | "work-ticket-management_time-entries"
-    | "work-ticket-management_workbench"
   >;
 
   /**

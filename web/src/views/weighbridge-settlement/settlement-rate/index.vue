@@ -93,12 +93,13 @@ function edit(id: string) {
 
 <template>
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <SettlementRateSearch
-      v-model:model="searchParams"
-      @reset="resetSearchParams"
-      @search="getDataByPage"
-    />
-    <NCard :title="$t('page.weighbridge_settlement.settlement_rate.pageTitle')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
+    <SettlementRateSearch v-model:model="searchParams" @reset="resetSearchParams" @search="getDataByPage" />
+    <NCard
+      :title="$t('page.weighbridge_settlement.settlement_rate.pageTitle')"
+      :bordered="false"
+      size="small"
+      class="card-wrapper sm:flex-1-hidden"
+    >
       <template #header-extra>
         <NSpace align="center" wrap>
           <ExcelTransfer
@@ -108,7 +109,6 @@ function edit(id: string) {
             :export-selected-api="ids => fetchExportSettlementRate({ ...searchParams, ids })"
             :selected-ids="checkedRowKeys"
             :template-api="fetchSettlementRateImportTemplate"
-            
             @imported="getDataByPage(1)"
           />
           <TableHeaderOperation

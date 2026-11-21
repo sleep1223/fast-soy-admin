@@ -178,6 +178,10 @@ db-reset:
 makemigrations:
     uv run tortoise makemigrations
 
+# Preview SQL for a migration.
+sqlmigrate app migration:
+    uv run tortoise sqlmigrate {{app}} {{migration}}
+
 # Apply pending migrations.
 migrate:
     uv run tortoise migrate

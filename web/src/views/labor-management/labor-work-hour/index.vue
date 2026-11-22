@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/business/auth';
 import { $t } from '@/locales';
 import LaborWorkHourOperateDrawer from './modules/labor-work-hour-operate-drawer.vue';
 import LaborWorkHourSearch from './modules/labor-work-hour-search.vue';
+import AssignmentStatusTag from './modules/assignment-status-tag.vue';
 
 const appStore = useAppStore();
 const { hasAuth } = useAuth();
@@ -68,6 +69,8 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       render: row => row.allocationMonth?.slice(0, 7) ?? '—' },
     { key: 'workerId', title: $t('page.labor_management.labor_work_hour.worker'), align: 'center', minWidth: 120,
       render: row => workerOptions.value.find(option => option.value === row.workerId)?.label ?? '—' },
+    { key: 'assignmentStatus', title: $t('page.labor_management.labor_work_hour.assignmentStatus'), align: 'center', minWidth: 110,
+      render: row => <AssignmentStatusTag workerId={row.workerId} allocationMonth={row.allocationMonth} /> },
     {
       key: 'operate',
       title: $t('common.operate'),
@@ -182,7 +185,7 @@ function edit(id: string) {
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"
-        :scroll-x="600"
+        :scroll-x="900"
         :loading="loading"
         remote
         :row-key="row => row.id"

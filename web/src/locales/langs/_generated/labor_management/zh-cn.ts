@@ -13,6 +13,7 @@ export default {
     labor_management: {
       common: { status: '状态', form: { status: '请选择状态' } },
       labor_project: {
+        orderCount: '订单数量',
         ticketCodeRequired: '请输入不超过 100 个字符的工票码',
         createWorkHourFailed: '工票创建失败，请重试',
         workHoursRequired: '请输入不小于零的工时',

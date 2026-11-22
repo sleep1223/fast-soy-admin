@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, h, onBeforeUnmount, ref, watch } from 'vue';
 import type { DataTableColumns } from 'naive-ui';
-import { fetchGetOrderList } from '@/service/api';
 import { $t } from '@/locales';
 import LaborOrderWorkHours from './labor-order-work-hours.vue';
+import { fetchMatchingOrders } from './matching-orders';
 
 const props = defineProps<{ partNo: string }>();
 const orders = ref<Api.OrderManagementManage.Order[]>([]);
@@ -18,9 +18,7 @@ const columns = computed<DataTableColumns<Api.OrderManagementManage.Order>>(() =
   { key: 'quantity', title: $t('page.order_management.order.quantity'), minWidth: 90 },
   { key: 'receivedQuantity', title: $t('page.order_management.order.receivedQuantity'), minWidth: 100 },
   { key: 'unit', title: $t('page.order_management.order.unit'), minWidth: 80 },
-  { key: 'processRoute', title: $t('page.order_management.order.processRoute'), minWidth: 180 },
-  { key: 'orderDueDate', title: $t('page.order_management.order.orderDueDate'), minWidth: 120 },
-  { key: 'customer', title: $t('page.order_management.order.customer'), minWidth: 120 }
+  { key: 'orderDueDate', title: $t('page.order_management.order.orderDueDate'), minWidth: 120 }
 ]);
 
 async function loadOrders() {
@@ -29,25 +27,9 @@ async function loadOrders() {
   loading.value = true;
   failed.value = false;
   orders.value = [];
-  const matches: Api.OrderManagementManage.Order[] = [];
-  let page = 1;
-  let received = 0;
-  let total = 0;
   try {
-    do {
-      const { data, error } = await fetchGetOrderList({ current: page, size: 1000, partNo });
-      if (current !== requestSequence) return;
-      if (error || !data) {
-        failed.value = true;
-        return;
-      }
-      matches.push(...data.records.filter(order => order.partNo === partNo));
-      received += data.records.length;
-      total = data.total;
-      if (!data.records.length) break;
-      page += 1;
-    } while (received < total);
-    orders.value = matches;
+    const matches = await fetchMatchingOrders(partNo, () => current === requestSequence);
+    if (matches) orders.value = matches;
   } catch {
     if (current === requestSequence) failed.value = true;
   } finally {

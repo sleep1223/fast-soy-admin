@@ -1,6 +1,6 @@
 <script setup lang="tsx">
-import { reactive } from 'vue';
-import { NButton, NPopconfirm } from 'naive-ui';
+import { onBeforeUnmount, reactive, ref, watch } from 'vue';
+import { NButton, NPopconfirm, NSpin } from 'naive-ui';
 import ExcelTransfer from '@/components/advanced/excel-transfer.vue';
 
 import {
@@ -14,9 +14,35 @@ import { $t } from '@/locales';
 import LaborProjectOperateDrawer from './modules/labor-project-operate-drawer.vue';
 import LaborProjectSearch from './modules/labor-project-search.vue';
 import LaborProjectOrders from './modules/labor-project-orders.vue';
+import { fetchMatchingOrders, summarizeOrders } from './modules/matching-orders';
 
 const appStore = useAppStore();
 const { hasAuth } = useAuth();
+type OrderSummary = ReturnType<typeof summarizeOrders>;
+type SummaryState = { loading: boolean; failed: boolean; value: OrderSummary | null };
+const summaries = ref<Record<string, SummaryState>>({});
+let summaryGeneration = 0;
+
+async function loadSummary(row: Api.LaborManagementManage.LaborProject, generation: number) {
+  const state = reactive<SummaryState>({ loading: true, failed: false, value: null });
+  summaries.value[row.id] = state;
+  try {
+    const orders = await fetchMatchingOrders(row.partNo, () => generation === summaryGeneration && summaries.value[row.id] === state);
+    if (orders) state.value = summarizeOrders(orders);
+  } catch {
+    if (generation === summaryGeneration && summaries.value[row.id] === state) state.failed = true;
+  } finally {
+    if (generation === summaryGeneration && summaries.value[row.id] === state) state.loading = false;
+  }
+}
+
+function renderSummary(row: Api.LaborManagementManage.LaborProject, key: keyof OrderSummary) {
+  const state = summaries.value[row.id];
+  if (!state || state.loading) return <NSpin size="small" />;
+  if (state.failed) return <NButton text type="error" onClick={() => loadSummary(row, summaryGeneration)}>{$t('page.labor_management.labor_project.retryOrders')}</NButton>;
+  const value = state.value?.[key];
+  return Array.isArray(value) ? value.join(' / ') || '—' : value ?? '—';
+}
 
 
 
@@ -40,6 +66,12 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
     { type: 'selection', align: 'center', width: 48 },
     { key: 'index', title: $t('common.index'), width: 64, align: 'center', render: (_, index) => index + 1 },
     { key: 'partNo', title: $t('page.labor_management.labor_project.partNo'), align: 'center', minWidth: 120 },
+    { key: 'orderCount', title: $t('page.labor_management.labor_project.orderCount'), align: 'center', minWidth: 110,
+      render: row => renderSummary(row, 'count') },
+    { key: 'processRoutes', title: $t('page.order_management.order.processRoute'), align: 'center', minWidth: 180,
+      render: row => renderSummary(row, 'processRoutes') },
+    { key: 'customers', title: $t('page.order_management.order.customer'), align: 'center', minWidth: 140,
+      render: row => renderSummary(row, 'customers') },
     {
       key: 'operate',
       title: $t('common.operate'),
@@ -69,6 +101,17 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
     }
   ]
 });
+
+watch([data, loading], ([rows, isLoading]) => {
+  if (isLoading) {
+    summaryGeneration += 1;
+    return;
+  }
+  const generation = ++summaryGeneration;
+  summaries.value = {};
+  for (const row of rows) void loadSummary(row, generation);
+}, { immediate: true });
+onBeforeUnmount(() => { summaryGeneration += 1; });
 
 const { drawerVisible, operateType, editingData, handleAdd, handleEdit, checkedRowKeys, onBatchDeleted, onDeleted } =
   useTableOperate(data, 'id', getData);
@@ -146,7 +189,7 @@ function edit(id: string) {
         :data="data"
         size="small"
         :flex-height="!appStore.isMobile"
-        :scroll-x="600"
+        :scroll-x="1000"
         :loading="loading"
         remote
         :row-key="row => row.id"

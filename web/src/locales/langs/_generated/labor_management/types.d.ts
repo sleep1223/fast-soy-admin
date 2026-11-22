@@ -10,6 +10,7 @@ declare global {
           form: { status: string };
         };
         labor_project: {
+          orderCount: string;
           ticketCodeRequired: string;
           createWorkHourFailed: string;
           workHoursRequired: string;

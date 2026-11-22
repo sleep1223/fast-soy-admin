@@ -12,6 +12,7 @@ export default {
     labor_management: {
       common: { status: 'Status', form: { status: 'Please select status' } },
       labor_project: {
+        orderCount: 'Orders',
         ticketCodeRequired: 'Enter a ticket code of at most 100 characters',
         createWorkHourFailed: 'Could not create the ticket. Please try again.',
         workHoursRequired: 'Enter work hours of zero or more',

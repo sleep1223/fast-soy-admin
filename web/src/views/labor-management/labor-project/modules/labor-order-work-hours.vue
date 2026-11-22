@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, h, onBeforeUnmount, ref, watch } from 'vue';
 import type { DataTableColumns } from 'naive-ui';
 import { fetchAddLaborWorkHour, fetchGetLaborWorkHourList } from '@/service/api';
 import { useAuth } from '@/hooks/business/auth';
 import { $t } from '@/locales';
+import AssignmentStatusTag from '../../labor-work-hour/modules/assignment-status-tag.vue';
 
 const props = defineProps<{ orderNo: string }>();
 const { hasAuth } = useAuth();
@@ -23,6 +24,12 @@ const columns = computed<DataTableColumns<Api.LaborManagementManage.LaborWorkHou
     title: $t('page.labor_management.labor_work_hour.allocationMonth'),
     minWidth: 120,
     render: row => row.allocationMonth?.slice(0, 7) ?? '—'
+  },
+  {
+    key: 'assignmentStatus',
+    title: $t('page.labor_management.labor_work_hour.assignmentStatus'),
+    minWidth: 110,
+    render: row => h(AssignmentStatusTag, { workerId: row.workerId, allocationMonth: row.allocationMonth })
   }
 ]);
 
@@ -143,7 +150,7 @@ onBeforeUnmount(() => {
           :data="records"
           :row-key="row => row.id"
           :pagination="{ pageSize: 10 }"
-          :scroll-x="400"
+          :scroll-x="510"
           size="small"
         />
       </template>

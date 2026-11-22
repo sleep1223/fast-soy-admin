@@ -14,6 +14,7 @@ from app.business.labor_management.controllers import labor_project_controller
 from app.business.labor_management.models import LaborProject
 from app.business.labor_management.schemas import LaborProjectCreate, LaborProjectSearch, LaborProjectUpdate
 from app.core.excel import write_excel
+from app.core.sqids import encode_id
 from app.utils import CRUDRouter
 
 
@@ -84,3 +85,12 @@ async def test_first_import_time_is_preserved_and_filter_applies_to_export() -> 
             book = load_workbook(BytesIO(b64decode(exported)), read_only=True)
             assert {row[0] for row in list(book.active.iter_rows(values_only=True))[1:]} == {"EARLIER"}
             book.close()
+            edited_time = datetime(2024, 6, 1, 12, 30, tzinfo=timezone.utc)
+            edited = await client.patch(f'/projects/{encode_id(manual.id)}', json={"importedAt": edited_time.isoformat()})
+            assert edited.status_code == 200
+            await manual.refresh_from_db()
+            assert manual.imported_at == edited_time
+            assert manual.skip_painting is True
+            await client.post('/import', files={"file": ("projects.xlsx", content)})
+            await manual.refresh_from_db()
+            assert manual.imported_at == edited_time

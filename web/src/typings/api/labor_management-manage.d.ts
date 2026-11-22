@@ -17,7 +17,7 @@ declare namespace Api {
       skipPainting?: boolean;
     };
 
-    type LaborProjectUpdateParams = { id?: string } & Partial<LaborProjectAddParams>;
+    type LaborProjectUpdateParams = { id?: string; importedAt?: string } & Partial<LaborProjectAddParams>;
 
     type LaborProjectSearchParams = CommonType.RecordNullable<
       {

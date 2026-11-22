@@ -22,7 +22,8 @@ class LaborProjectCreate(LaborProjectBase):
     skip_painting: bool = Field(False, title="无需刷漆")
 
 
-class LaborProjectUpdate(LaborProjectBase): ...
+class LaborProjectUpdate(LaborProjectBase):
+    imported_at: datetime | None = Field(None, title="导入时间")
 
 
 class LaborProjectSearch(LaborProjectBase, PageQueryBase):

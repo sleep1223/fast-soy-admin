@@ -32,6 +32,7 @@ const title = computed(() => {
 });
 
 const model = ref(createDefaultModel());
+const importedAt = ref<number | null>(null);
 
 function createDefaultModel(): Api.LaborManagementManage.LaborProjectAddParams {
   return {
@@ -46,8 +47,10 @@ const rules: Record<string, App.Global.FormRule> = {
 
 function handleInitModel() {
   model.value = createDefaultModel();
+  importedAt.value = null;
   if (props.operateType === 'edit' && props.rowData) {
     Object.assign(model.value, jsonClone(props.rowData));
+    importedAt.value = props.rowData.importedAt ?? null;
   }
 }
 
@@ -63,7 +66,14 @@ async function handleSubmit() {
     if (error) return;
     window.$message?.success($t('common.addSuccess'));
   } else {
-    const { error } = await fetchUpdateLaborProject({ id: props.rowData?.id, ...model.value });
+    const payload: Api.LaborManagementManage.LaborProjectUpdateParams = {
+      id: props.rowData?.id,
+      partNo: model.value.partNo
+    };
+    if (importedAt.value !== null && importedAt.value !== (props.rowData?.importedAt ?? null)) {
+      payload.importedAt = new Date(importedAt.value).toISOString();
+    }
+    const { error } = await fetchUpdateLaborProject(payload);
     if (error) return;
     window.$message?.success($t('common.updateSuccess'));
   }
@@ -85,6 +95,9 @@ watch(visible, () => {
       <NForm ref="formRef" :model="model" :rules="rules">
         <NFormItem :label="$t('page.labor_management.labor_project.partNo')" path="partNo">
           <NInput v-model:value="model.partNo" :placeholder="$t('page.labor_management.labor_project.form.partNo')" />
+        </NFormItem>
+        <NFormItem v-if="operateType === 'edit'" :label="$t('page.labor_management.labor_project.importedAt')">
+          <NDatePicker v-model:value="importedAt" type="datetime" class="w-full" />
         </NFormItem>
       </NForm>
       <template #footer>

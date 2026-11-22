@@ -1,5 +1,7 @@
 """劳务工票的人员分配校验。"""
 
+from datetime import date
+
 import pytest
 from pydantic import ValidationError
 
@@ -16,3 +18,7 @@ def test_new_work_hour_requires_worker() -> None:
 
 def test_legacy_work_hour_can_be_updated_without_worker() -> None:
     assert LaborWorkHourUpdate.model_validate({"ticketCode": "T001"}).model_dump(exclude_unset=True) == {"ticket_code": "T001"}
+
+
+def test_allocation_month_is_normalized() -> None:
+    assert LaborWorkHourUpdate.model_validate({"allocationMonth": "2026-12-20"}).allocation_month == date(2026, 12, 1)

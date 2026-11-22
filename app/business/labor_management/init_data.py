@@ -19,37 +19,6 @@ INIT_DATA = {
             "reconcile": {"menus": True, "buttons": True},
             "children": [
                 {
-                    "menu_name": "月度接收工件明细",
-                    "route_name": "labor-management_labor-receipt",
-                    "route_path": "/labor-management/labor-receipt",
-                    "component": "view.labor-management_labor-receipt",
-                    "order": 0,
-                    "icon": "mdi:table",
-                    "i18n_key": "route.labor-management_labor-receipt",
-                    "buttons": [
-                        {"button_code": "B_LABOR_MANAGEMENT_LABOR_RECEIPT_CREATE", "button_desc": "创建月度接收工件"},
-                        {"button_code": "B_LABOR_MANAGEMENT_LABOR_RECEIPT_EDIT", "button_desc": "编辑月度接收工件"},
-                        {"button_code": "B_LABOR_MANAGEMENT_LABOR_RECEIPT_DELETE", "button_desc": "删除月度接收工件"},
-                        {"button_code": "B_LABOR_MANAGEMENT_LABOR_RECEIPT_IMPORT", "button_desc": "导入月度接收工件"},
-                    ],
-                },
-                {
-                    "menu_name": "劳务项目",
-                    "route_name": "labor-management_labor-project",
-                    "route_path": "/labor-management/labor-project",
-                    "component": "view.labor-management_labor-project",
-                    "order": 1,
-                    "icon": "mdi:table",
-                    "i18n_key": "route.labor-management_labor-project",
-                    "buttons": [
-                        {"button_code": "B_LABOR_MANAGEMENT_LABOR_PROJECT_CREATE", "button_desc": "创建劳务项目"},
-                        {"button_code": "B_LABOR_MANAGEMENT_LABOR_PROJECT_EDIT", "button_desc": "编辑劳务项目"},
-                        {"button_code": "B_LABOR_MANAGEMENT_LABOR_PROJECT_DELETE", "button_desc": "删除劳务项目"},
-                        {"button_code": "B_LABOR_MANAGEMENT_LABOR_PROJECT_IMPORT", "button_desc": "导入劳务项目"},
-                        {"button_code": "B_LABOR_MANAGEMENT_LABOR_PROJECT_EXPORT", "button_desc": "导出劳务项目"},
-                    ],
-                },
-                {
                     "menu_name": "劳务人员",
                     "route_name": "labor-management_labor-worker",
                     "route_path": "/labor-management/labor-worker",

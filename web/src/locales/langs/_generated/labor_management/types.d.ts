@@ -5,30 +5,9 @@ declare global {
   namespace App.I18n {
     interface GeneratedPages {
       labor_management: {
-        labor_receipt: {
-          title: string;
-          import: string;
-          confirmImport: string;
-          imported: string;
-          skipped: string;
-          unmatched: string;
-          loadFailed: string;
-        };
         common: {
           status: string;
           form: { status: string };
-        };
-        labor_project: {
-          viewOrders: string;
-          orderName: string;
-          addTicket: string;
-          pageTitle: string;
-          partNo: string;
-          form: {
-            partNo: string;
-          };
-          addLaborProject: string;
-          editLaborProject: string;
         };
         labor_worker: {
           pageTitle: string;

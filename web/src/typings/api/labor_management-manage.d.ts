@@ -4,35 +4,6 @@ declare namespace Api {
     type CommonBatchDeleteParams = { ids: string[] };
     type CommonSearchParams = Pick<Common.PaginatingCommonParams, 'current' | 'size'>;
 
-    type LaborReceipt = Common.CommonRecord<{ receiptMonth: string; partNo: string }>;
-    type LaborReceiptSearchParams = CommonType.RecordNullable<
-      {
-        receiptMonthStart?: string;
-        receiptMonthEnd?: string;
-        partNo?: string;
-      } & CommonSearchParams
-    >;
-    type LaborReceiptList = Common.PaginatingQueryRecord<LaborReceipt>;
-
-    // ---- LaborProject ----
-    type LaborProject = Common.CommonRecord<{
-      partNo: string;
-    }>;
-
-    type LaborProjectAddParams = {
-      partNo: string;
-    };
-
-    type LaborProjectUpdateParams = { id?: string } & Partial<LaborProjectAddParams>;
-
-    type LaborProjectSearchParams = CommonType.RecordNullable<
-      {
-        partNo?: string;
-      } & CommonSearchParams
-    >;
-
-    type LaborProjectList = Common.PaginatingQueryRecord<LaborProject>;
-
     // ---- LaborWorker ----
     type LaborWorker = Common.CommonRecord<{
       employeeNo: string;
@@ -67,7 +38,6 @@ declare namespace Api {
       workHours: number;
       orderNo: string;
       workerId: string | null;
-      receiptId?: string | null;
       allocationMonth?: string | null;
     }>;
 
@@ -76,7 +46,6 @@ declare namespace Api {
       workHours: number;
       orderNo: string;
       workerId?: string | null;
-      receiptId?: string | null;
       allocationMonth?: string | null;
     };
 
@@ -87,7 +56,6 @@ declare namespace Api {
         ticketCode?: string;
         orderNo?: string;
         workerId?: string;
-        receiptId?: string;
       } & CommonSearchParams
     >;
 

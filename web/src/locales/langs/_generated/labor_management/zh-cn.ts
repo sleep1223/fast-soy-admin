@@ -5,35 +5,12 @@
 export default {
   route: {
     'labor-management': '劳务管理',
-    'labor-management_labor-project': '劳务项目',
-    'labor-management_labor-receipt': '月度接收工件',
     'labor-management_labor-worker': '劳务人员',
     'labor-management_labor-work-hour': '工票对应的工时'
   },
   page: {
     labor_management: {
-      labor_receipt: {
-        title: '月度接收工件',
-        import: '导入表格',
-        confirmImport: '确认将表格导入所选月份？重复项目号将跳过。',
-        imported: '新增',
-        skipped: '跳过',
-        unmatched: '未匹配到订单',
-        loadFailed: '加载订单或工票失败，请重试'
-      },
       common: { status: '状态', form: { status: '请选择状态' } },
-      labor_project: {
-        viewOrders: '查看订单',
-        orderName: '订单名称',
-        addTicket: '录入工票',
-        pageTitle: '劳务项目',
-        partNo: '项目号',
-        form: {
-          partNo: '请输入项目号'
-        },
-        addLaborProject: '新增劳务项目',
-        editLaborProject: '编辑劳务项目'
-      },
       labor_worker: {
         pageTitle: '劳务人员',
         employeeNo: '工号',

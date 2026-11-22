@@ -58,24 +58,6 @@ export const generatedRoutes: GeneratedRoute[] = [
     },
     children: [
       {
-        name: 'labor-management_labor-project',
-        path: '/labor-management/labor-project',
-        component: 'view.labor-management_labor-project',
-        meta: {
-          title: 'labor-management_labor-project',
-          i18nKey: 'route.labor-management_labor-project'
-        }
-      },
-      {
-        name: 'labor-management_labor-receipt',
-        path: '/labor-management/labor-receipt',
-        component: 'view.labor-management_labor-receipt',
-        meta: {
-          title: 'labor-management_labor-receipt',
-          i18nKey: 'route.labor-management_labor-receipt'
-        }
-      },
-      {
         name: 'labor-management_labor-work-hour',
         path: '/labor-management/labor-work-hour',
         component: 'view.labor-management_labor-work-hour',

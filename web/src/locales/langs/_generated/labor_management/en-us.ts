@@ -4,35 +4,12 @@
 export default {
   route: {
     'labor-management': 'LaborManagement',
-    'labor-management_labor-project': 'Labor Project',
-    'labor-management_labor-receipt': 'Monthly Receipts',
     'labor-management_labor-worker': 'Labor Worker',
     'labor-management_labor-work-hour': 'Labor Work Hour'
   },
   page: {
     labor_management: {
-      labor_receipt: {
-        title: 'Monthly receipts',
-        import: 'Import spreadsheet',
-        confirmImport: 'Import this spreadsheet into the selected month? Existing project numbers are skipped.',
-        imported: 'Added',
-        skipped: 'Skipped',
-        unmatched: 'No matching orders',
-        loadFailed: 'Could not load orders or tickets. Try again.'
-      },
       common: { status: 'Status', form: { status: 'Please select status' } },
-      labor_project: {
-        viewOrders: 'View orders',
-        orderName: 'Order name',
-        addTicket: 'Add ticket',
-        pageTitle: 'Labor Project',
-        partNo: 'partNo',
-        form: {
-          partNo: 'Please input partNo'
-        },
-        addLaborProject: 'Add Labor Project',
-        editLaborProject: 'Edit Labor Project'
-      },
       labor_worker: {
         pageTitle: 'Labor Worker',
         employeeNo: 'employeeNo',

@@ -4,8 +4,11 @@ labor_management 管理接口 — CRUD。
 
 from fastapi import APIRouter
 
-from app.business.labor_management.controllers import labor_work_hour_controller, labor_worker_controller
+from app.business.labor_management.controllers import labor_project_controller, labor_work_hour_controller, labor_worker_controller
 from app.business.labor_management.schemas import (
+    LaborProjectCreate,
+    LaborProjectSearch,
+    LaborProjectUpdate,
     LaborWorkerCreate,
     LaborWorkerSearch,
     LaborWorkerUpdate,
@@ -14,6 +17,27 @@ from app.business.labor_management.schemas import (
     LaborWorkHourUpdate,
 )
 from app.utils import CRUDRouter, ExcelConfig, ExcelDetail, SearchFieldConfig, require_buttons
+
+labor_project_crud = CRUDRouter(
+    prefix="/labor_projects",
+    controller=labor_project_controller,
+    create_schema=LaborProjectCreate,
+    excel=ExcelConfig(fields=("part_no",), update_key="part_no"),
+    update_schema=LaborProjectUpdate,
+    list_schema=LaborProjectSearch,
+    route_key_prefix="labor_management.labor_projects",
+    search_fields=SearchFieldConfig(contains_fields=["part_no"]),
+    action_dependencies={
+        "create": [require_buttons("B_LABOR_MANAGEMENT_LABOR_PROJECT_CREATE")],
+        "update": [require_buttons("B_LABOR_MANAGEMENT_LABOR_PROJECT_EDIT")],
+        "delete": [require_buttons("B_LABOR_MANAGEMENT_LABOR_PROJECT_DELETE")],
+        "batch_delete": [require_buttons("B_LABOR_MANAGEMENT_LABOR_PROJECT_DELETE")],
+        "import": [require_buttons("B_LABOR_MANAGEMENT_LABOR_PROJECT_IMPORT")],
+        "import_template": [require_buttons("B_LABOR_MANAGEMENT_LABOR_PROJECT_IMPORT")],
+        "export": [require_buttons("B_LABOR_MANAGEMENT_LABOR_PROJECT_EXPORT")],
+    },
+    summary_prefix="劳务项目",
+)
 
 labor_worker_crud = CRUDRouter(
     prefix="/labor_workers",
@@ -60,6 +84,7 @@ labor_work_hour_crud = CRUDRouter(
 )
 
 router = APIRouter(tags=["labor_management"])
+router.include_router(labor_project_crud.router)
 
 
 router.include_router(labor_worker_crud.router)

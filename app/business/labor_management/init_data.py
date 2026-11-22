@@ -19,6 +19,22 @@ INIT_DATA = {
             "reconcile": {"menus": True, "buttons": True},
             "children": [
                 {
+                    "menu_name": "劳务项目",
+                    "route_name": "labor-management_labor-project",
+                    "route_path": "/labor-management/labor-project",
+                    "component": "view.labor-management_labor-project",
+                    "order": 1,
+                    "icon": "mdi:table",
+                    "i18n_key": "route.labor-management_labor-project",
+                    "buttons": [
+                        {"button_code": "B_LABOR_MANAGEMENT_LABOR_PROJECT_CREATE", "button_desc": "创建劳务项目"},
+                        {"button_code": "B_LABOR_MANAGEMENT_LABOR_PROJECT_EDIT", "button_desc": "编辑劳务项目"},
+                        {"button_code": "B_LABOR_MANAGEMENT_LABOR_PROJECT_DELETE", "button_desc": "删除劳务项目"},
+                        {"button_code": "B_LABOR_MANAGEMENT_LABOR_PROJECT_IMPORT", "button_desc": "导入劳务项目"},
+                        {"button_code": "B_LABOR_MANAGEMENT_LABOR_PROJECT_EXPORT", "button_desc": "导出劳务项目"},
+                    ],
+                },
+                {
                     "menu_name": "劳务人员",
                     "route_name": "labor-management_labor-worker",
                     "route_path": "/labor-management/labor-worker",

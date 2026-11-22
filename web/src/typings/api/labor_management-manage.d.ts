@@ -4,6 +4,25 @@ declare namespace Api {
     type CommonBatchDeleteParams = { ids: string[] };
     type CommonSearchParams = Pick<Common.PaginatingCommonParams, 'current' | 'size'>;
 
+    // ---- LaborProject ----
+    type LaborProject = Common.CommonRecord<{
+      partNo: string;
+    }>;
+
+    type LaborProjectAddParams = {
+      partNo: string;
+    };
+
+    type LaborProjectUpdateParams = { id?: string } & Partial<LaborProjectAddParams>;
+
+    type LaborProjectSearchParams = CommonType.RecordNullable<
+      {
+        partNo?: string;
+      } & CommonSearchParams
+    >;
+
+    type LaborProjectList = Common.PaginatingQueryRecord<LaborProject>;
+
     // ---- LaborWorker ----
     type LaborWorker = Common.CommonRecord<{
       employeeNo: string;

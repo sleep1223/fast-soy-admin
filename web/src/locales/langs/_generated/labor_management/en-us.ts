@@ -4,12 +4,24 @@
 export default {
   route: {
     'labor-management': 'LaborManagement',
+    'labor-management_labor-project': 'Labor Project',
     'labor-management_labor-worker': 'Labor Worker',
     'labor-management_labor-work-hour': 'Labor Work Hour'
   },
   page: {
     labor_management: {
       common: { status: 'Status', form: { status: 'Please select status' } },
+      labor_project: {
+        matchedOrders: 'Related orders',
+        noMatchedOrders: 'No matching orders',
+        ordersLoadFailed: 'Could not load orders. Please try again.',
+        retryOrders: 'Reload',
+        pageTitle: 'Labor Project',
+        partNo: 'Project number',
+        form: { partNo: 'Please enter a project number' },
+        addLaborProject: 'Add Labor Project',
+        editLaborProject: 'Edit Labor Project'
+      },
       labor_worker: {
         pageTitle: 'Labor Worker',
         employeeNo: 'employeeNo',

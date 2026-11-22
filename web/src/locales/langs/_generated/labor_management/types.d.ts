@@ -9,6 +9,17 @@ declare global {
           status: string;
           form: { status: string };
         };
+        labor_project: {
+          matchedOrders: string;
+          noMatchedOrders: string;
+          ordersLoadFailed: string;
+          retryOrders: string;
+          pageTitle: string;
+          partNo: string;
+          form: { partNo: string };
+          addLaborProject: string;
+          editLaborProject: string;
+        };
         labor_worker: {
           pageTitle: string;
           employeeNo: string;

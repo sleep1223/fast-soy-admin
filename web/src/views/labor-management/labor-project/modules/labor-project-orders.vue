@@ -1,0 +1,90 @@
+<script setup lang="ts">
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import type { DataTableColumns } from 'naive-ui';
+import { fetchGetOrderList } from '@/service/api';
+import { $t } from '@/locales';
+
+const props = defineProps<{ partNo: string }>();
+const orders = ref<Api.OrderManagementManage.Order[]>([]);
+const loading = ref(false);
+const failed = ref(false);
+let requestSequence = 0;
+
+const columns = computed<DataTableColumns<Api.OrderManagementManage.Order>>(() => [
+  { key: 'orderNo', title: $t('page.order_management.order.orderNo'), minWidth: 150 },
+  { key: 'name', title: $t('page.order_management.order.name'), minWidth: 150 },
+  { key: 'quantity', title: $t('page.order_management.order.quantity'), minWidth: 90 },
+  { key: 'receivedQuantity', title: $t('page.order_management.order.receivedQuantity'), minWidth: 100 },
+  { key: 'unit', title: $t('page.order_management.order.unit'), minWidth: 80 },
+  { key: 'processRoute', title: $t('page.order_management.order.processRoute'), minWidth: 180 },
+  { key: 'orderDueDate', title: $t('page.order_management.order.orderDueDate'), minWidth: 120 },
+  { key: 'customer', title: $t('page.order_management.order.customer'), minWidth: 120 }
+]);
+
+async function loadOrders() {
+  const current = ++requestSequence;
+  const partNo = props.partNo;
+  loading.value = true;
+  failed.value = false;
+  orders.value = [];
+  const matches: Api.OrderManagementManage.Order[] = [];
+  let page = 1;
+  let received = 0;
+  let total = 0;
+  try {
+    do {
+      const { data, error } = await fetchGetOrderList({ current: page, size: 1000, partNo });
+      if (current !== requestSequence) return;
+      if (error || !data) {
+        failed.value = true;
+        return;
+      }
+      matches.push(...data.records.filter(order => order.partNo === partNo));
+      received += data.records.length;
+      total = data.total;
+      if (!data.records.length) break;
+      page += 1;
+    } while (received < total);
+    orders.value = matches;
+  } catch {
+    if (current === requestSequence) failed.value = true;
+  } finally {
+    if (current === requestSequence) loading.value = false;
+  }
+}
+
+watch(() => props.partNo, loadOrders, { immediate: true });
+onBeforeUnmount(() => {
+  requestSequence += 1;
+});
+</script>
+
+<template>
+  <div class="px-12px py-8px">
+    <NSpin :show="loading">
+      <NAlert v-if="failed" type="error">
+        {{ $t('page.labor_management.labor_project.ordersLoadFailed') }}
+        <NButton text type="primary" class="ml-8px" @click="loadOrders">
+          {{ $t('page.labor_management.labor_project.retryOrders') }}
+        </NButton>
+      </NAlert>
+      <NEmpty
+        v-else-if="!loading && !orders.length"
+        :description="$t('page.labor_management.labor_project.noMatchedOrders')"
+      />
+      <template v-else-if="orders.length">
+        <div class="mb-8px font-medium">
+          {{ $t('page.labor_management.labor_project.matchedOrders') }} · {{ orders.length }}
+        </div>
+        <NDataTable
+          :columns="columns"
+          :data="orders"
+          :row-key="row => row.id"
+          :pagination="{ pageSize: 10 }"
+          :scroll-x="1000"
+          size="small"
+        />
+      </template>
+    </NSpin>
+  </div>
+</template>

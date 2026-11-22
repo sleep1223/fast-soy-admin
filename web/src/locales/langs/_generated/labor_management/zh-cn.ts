@@ -5,12 +5,24 @@
 export default {
   route: {
     'labor-management': '劳务管理',
+    'labor-management_labor-project': '劳务项目',
     'labor-management_labor-worker': '劳务人员',
     'labor-management_labor-work-hour': '工票对应的工时'
   },
   page: {
     labor_management: {
       common: { status: '状态', form: { status: '请选择状态' } },
+      labor_project: {
+        matchedOrders: '关联订单',
+        noMatchedOrders: '暂无匹配订单',
+        ordersLoadFailed: '订单加载失败，请重试',
+        retryOrders: '重新加载',
+        pageTitle: '劳务项目',
+        partNo: '项目号',
+        form: { partNo: '请输入项目号' },
+        addLaborProject: '新增劳务项目',
+        editLaborProject: '编辑劳务项目'
+      },
       labor_worker: {
         pageTitle: '劳务人员',
         employeeNo: '工号',

@@ -11,6 +11,22 @@ from pydantic import Field, field_validator
 
 from app.utils import PageQueryBase, SchemaBase, SqidId
 
+
+class LaborProjectBase(SchemaBase):
+    part_no: Annotated[str, Field(max_length=200)] | None = Field(None, title="项目号")
+
+
+class LaborProjectCreate(LaborProjectBase):
+    part_no: Annotated[str, Field(max_length=200)] = Field(title="项目号")
+
+
+class LaborProjectUpdate(LaborProjectBase): ...
+
+
+class LaborProjectSearch(LaborProjectBase, PageQueryBase):
+    pass
+
+
 # ============================================================
 # 劳务人员
 # ============================================================

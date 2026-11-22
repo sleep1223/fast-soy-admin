@@ -74,11 +74,10 @@ class LaborWorkHourCreate(LaborWorkHourBase):
     ticket_code: Annotated[str, Field(max_length=100)] = Field(title="工票码")
     work_hours: Decimal = Field(title="工时（小时）")
     order_no: Annotated[str, Field(max_length=100)] = Field(title="订单号")
-    worker_id: SqidId = Field(title="劳务人员")
 
 
 class LaborWorkHourUpdate(LaborWorkHourBase): ...
 
 
 class LaborWorkHourSearch(LaborWorkHourBase, PageQueryBase):
-    pass
+    is_assigned: bool | None = Field(None, title="是否已分配")

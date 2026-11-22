@@ -13,6 +13,12 @@ export default {
     labor_management: {
       common: { status: '状态', form: { status: '请选择状态' } },
       labor_project: {
+        ticketCodeRequired: '请输入不超过 100 个字符的工票码',
+        createWorkHourFailed: '工票创建失败，请重试',
+        workHoursRequired: '请输入不小于零的工时',
+        matchedWorkHours: '工票工时',
+        noMatchedWorkHours: '该订单暂无匹配工票',
+        workHoursLoadFailed: '工票工时加载失败，请重试',
         matchedOrders: '关联订单',
         noMatchedOrders: '暂无匹配订单',
         ordersLoadFailed: '订单加载失败，请重试',
@@ -39,6 +45,9 @@ export default {
         editLaborWorker: '编辑劳务人员'
       },
       labor_work_hour: {
+        assignmentStatus: '分配状态',
+        assigned: '已分配',
+        unassigned: '未分配',
         allocationMonth: '分配月份',
         allocationMonthRequired: '请选择分配月份',
         ocrUpload: '选择图片识别工票码',

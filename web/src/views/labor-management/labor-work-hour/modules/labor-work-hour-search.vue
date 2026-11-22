@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { $t } from '@/locales';
 
 type SelectOptionItem = { label: string; value: string | number };
@@ -20,6 +21,16 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 const model = defineModel<Api.LaborManagementManage.LaborWorkHourSearchParams>('model', { required: true });
+const assignedValue = computed({
+  get: () => (model.value.isAssigned == null ? null : model.value.isAssigned ? 'assigned' : 'unassigned'),
+  set: (value: string | null) => {
+    model.value.isAssigned = value === null ? null : value === 'assigned';
+  }
+});
+const assignedOptions = computed(() => [
+  { label: $t('page.labor_management.labor_work_hour.assigned'), value: 'assigned' },
+  { label: $t('page.labor_management.labor_work_hour.unassigned'), value: 'unassigned' }
+]);
 
 function reset() {
   emit('reset');
@@ -45,6 +56,19 @@ function search() {
               <NInput
                 v-model:value="model.ticketCode"
                 :placeholder="$t('page.labor_management.labor_work_hour.form.ticketCode')"
+              />
+            </NFormItemGi>
+            <NFormItemGi
+              span="24 s:12 m:6"
+              :label="$t('page.labor_management.labor_work_hour.assignmentStatus')"
+              path="isAssigned"
+              class="pr-24px"
+            >
+              <NSelect
+                v-model:value="assignedValue"
+                :options="assignedOptions"
+                clearable
+                :placeholder="$t('page.labor_management.labor_work_hour.assignmentStatus')"
               />
             </NFormItemGi>
             <NFormItemGi

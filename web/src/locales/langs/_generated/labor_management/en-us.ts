@@ -12,6 +12,12 @@ export default {
     labor_management: {
       common: { status: 'Status', form: { status: 'Please select status' } },
       labor_project: {
+        ticketCodeRequired: 'Enter a ticket code of at most 100 characters',
+        createWorkHourFailed: 'Could not create the ticket. Please try again.',
+        workHoursRequired: 'Enter work hours of zero or more',
+        matchedWorkHours: 'Ticket work hours',
+        noMatchedWorkHours: 'No tickets match this order',
+        workHoursLoadFailed: 'Could not load ticket work hours. Please try again.',
         matchedOrders: 'Related orders',
         noMatchedOrders: 'No matching orders',
         ordersLoadFailed: 'Could not load orders. Please try again.',
@@ -38,6 +44,9 @@ export default {
         editLaborWorker: 'Edit Labor Worker'
       },
       labor_work_hour: {
+        assignmentStatus: 'Assignment status',
+        assigned: 'Assigned',
+        unassigned: 'Unassigned',
         allocationMonth: 'Allocation month',
         allocationMonthRequired: 'Select an allocation month',
         ocrUpload: 'Select an image to recognize the ticket code',

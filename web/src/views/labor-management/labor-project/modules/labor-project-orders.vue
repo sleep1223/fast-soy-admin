@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, h, onBeforeUnmount, ref, watch } from 'vue';
 import type { DataTableColumns } from 'naive-ui';
 import { fetchGetOrderList } from '@/service/api';
 import { $t } from '@/locales';
+import LaborOrderWorkHours from './labor-order-work-hours.vue';
 
 const props = defineProps<{ partNo: string }>();
 const orders = ref<Api.OrderManagementManage.Order[]>([]);
@@ -11,6 +12,7 @@ const failed = ref(false);
 let requestSequence = 0;
 
 const columns = computed<DataTableColumns<Api.OrderManagementManage.Order>>(() => [
+  { type: 'expand', expandable: () => true, renderExpand: row => h(LaborOrderWorkHours, { orderNo: row.orderNo }) },
   { key: 'orderNo', title: $t('page.order_management.order.orderNo'), minWidth: 150 },
   { key: 'name', title: $t('page.order_management.order.name'), minWidth: 150 },
   { key: 'quantity', title: $t('page.order_management.order.quantity'), minWidth: 90 },

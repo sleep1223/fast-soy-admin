@@ -78,8 +78,7 @@ function createDefaultModel(): Api.LaborManagementManage.LaborWorkHourAddParams 
 const rules: Record<string, App.Global.FormRule> = {
   ticketCode: defaultRequiredRule,
   workHours: defaultRequiredRule,
-  orderNo: defaultRequiredRule,
-  workerId: defaultRequiredRule
+  orderNo: defaultRequiredRule
 };
 
 function handleInitModel() {

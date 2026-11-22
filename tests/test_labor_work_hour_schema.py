@@ -2,17 +2,14 @@
 
 from datetime import date
 
-import pytest
-from pydantic import ValidationError
-
 from app.business.labor_management.schemas import LaborWorkHourCreate, LaborWorkHourUpdate
 from app.core.sqids import encode_id
 
 
-def test_new_work_hour_requires_worker() -> None:
+def test_new_work_hour_may_be_unassigned() -> None:
     data = {"ticketCode": "T001", "orderNo": "O001", "workHours": "2.50"}
-    with pytest.raises(ValidationError):
-        LaborWorkHourCreate.model_validate(data)
+    assert LaborWorkHourCreate.model_validate(data).worker_id is None
+    assert LaborWorkHourCreate.model_validate({**data, "workerId": None}).worker_id is None
     assert LaborWorkHourCreate.model_validate({**data, "workerId": encode_id(1)}).worker_id == 1
 
 

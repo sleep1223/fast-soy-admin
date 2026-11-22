@@ -6,6 +6,7 @@ import ProjectOrders from '../labor-project-orders.vue';
 
 vi.mock('@/locales', () => ({ $t: (key: string) => key }));
 vi.mock('@/service/api', () => ({ fetchGetOrderList: vi.fn() }));
+vi.mock('@/hooks/business/auth', () => ({ useAuth: () => ({ hasAuth: () => false }) }));
 
 const Table = defineComponent({
   props: ['data'],

@@ -46,6 +46,7 @@ const defaultSearchParams: Api.LaborManagementManage.LaborWorkHourSearchParams =
   ticketCode: null,
   orderNo: null,
   workerId: null,
+  isAssigned: null,
 };
 
 const searchParams: Api.LaborManagementManage.LaborWorkHourSearchParams = reactive({ ...defaultSearchParams });
@@ -63,6 +64,8 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
     { key: 'ticketCode', title: $t('page.labor_management.labor_work_hour.ticketCode'), align: 'center', minWidth: 120 },
     { key: 'workHours', title: $t('page.labor_management.labor_work_hour.workHours'), align: 'center', minWidth: 120 },
     { key: 'orderNo', title: $t('page.labor_management.labor_work_hour.orderNo'), align: 'center', minWidth: 120 },
+    { key: 'allocationMonth', title: $t('page.labor_management.labor_work_hour.allocationMonth'), align: 'center', minWidth: 120,
+      render: row => row.allocationMonth?.slice(0, 7) ?? '—' },
     { key: 'workerId', title: $t('page.labor_management.labor_work_hour.worker'), align: 'center', minWidth: 120,
       render: row => workerOptions.value.find(option => option.value === row.workerId)?.label ?? '—' },
     {

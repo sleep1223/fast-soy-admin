@@ -10,6 +10,12 @@ declare global {
           form: { status: string };
         };
         labor_project: {
+          ticketCodeRequired: string;
+          createWorkHourFailed: string;
+          workHoursRequired: string;
+          matchedWorkHours: string;
+          noMatchedWorkHours: string;
+          workHoursLoadFailed: string;
           matchedOrders: string;
           noMatchedOrders: string;
           ordersLoadFailed: string;
@@ -36,6 +42,9 @@ declare global {
           editLaborWorker: string;
         };
         labor_work_hour: {
+          assignmentStatus: string;
+          assigned: string;
+          unassigned: string;
           allocationMonth: string;
           allocationMonthRequired: string;
           ocrUpload: string;

@@ -66,7 +66,7 @@ labor_work_hour_crud = CRUDRouter(
     prefix="/labor_work_hours",
     controller=labor_work_hour_controller,
     create_schema=LaborWorkHourCreate,
-    excel=ExcelConfig(fields=("ticket_code", "work_hours", "order_no", "worker_id"), update_key="ticket_code"),
+    excel=ExcelConfig(fields=("ticket_code", "work_hours", "order_no", "worker_id", "allocation_month"), update_key="ticket_code"),
     update_schema=LaborWorkHourUpdate,
     list_schema=LaborWorkHourSearch,
     route_key_prefix="labor_management.labor_work_hours",

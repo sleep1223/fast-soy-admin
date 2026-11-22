@@ -175,7 +175,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="px-12px py-8px">
+  <div class="labor-project-detail">
+    <h3 class="labor-project-detail-heading">
+      {{ $t('page.labor_management.labor_project.matchedWorkHours') }}
+      <span v-if="records.length" class="labor-project-detail-count">{{ records.length }}</span>
+    </h3>
     <NForm
       v-if="!props.skipPainting && hasAuth('B_LABOR_MANAGEMENT_LABOR_WORK_HOUR_CREATE')"
       inline
@@ -242,19 +246,14 @@ onBeforeUnmount(() => {
         v-else-if="!loading && !records.length"
         :description="$t('page.labor_management.labor_project.noMatchedWorkHours')"
       />
-      <template v-else-if="records.length">
-        <div class="mb-8px font-medium">
-          {{ $t('page.labor_management.labor_project.matchedWorkHours') }} · {{ records.length }}
-        </div>
-        <NDataTable
-          :columns="columns"
-          :data="records"
-          :row-key="row => row.id"
-          :pagination="{ pageSize: 10 }"
-          :scroll-x="510"
-          size="small"
-        />
-      </template>
+      <NDataTable
+        v-else-if="records.length"
+        :columns="columns"
+        :data="records"
+        :row-key="row => row.id"
+        :scroll-x="510"
+        size="small"
+      />
     </NSpin>
   </div>
 </template>

@@ -155,8 +155,28 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
     { type: 'expand', expandable: row => !row.skipPainting, renderExpand: row => expandedRowKeys.value.includes(row.id) ? <LaborProjectOrders partNo={row.partNo} skipPainting={row.skipPainting} onLoaded={orders => { const state = summaries.value[row.id]; if (state) { state.value = summarizeOrders(orders); state.failed = false; state.loading = false; } }} /> : null },
     { type: 'selection', align: 'center', width: 48 },
     { key: 'index', title: $t('common.index'), width: 64, align: 'center', render: (_, index) => index + 1 },
-    { key: 'partNo', title: $t('page.labor_management.labor_project.partNo'), align: 'center', minWidth: 140,
-      render: row => <div class="flex-center gap-4px"><span>{row.partNo}</span><NButton quaternary size="tiny" aria-label={$t('page.labor_management.labor_project.copy')} onClick={(event: MouseEvent) => { event.stopPropagation(); void copyProjectNo(row.partNo); }}><icon-ic-round-content-copy class="text-14px" /></NButton></div> },
+    {
+      key: 'partNo',
+      title: $t('page.labor_management.labor_project.partNo'),
+      align: 'center',
+      minWidth: 140,
+      render: row => (
+        <div class="flex-center gap-4px">
+          <span class="font-semibold">{row.partNo}</span>
+          <NButton
+            quaternary
+            size="tiny"
+            aria-label={$t('page.labor_management.labor_project.copy')}
+            onClick={(event: MouseEvent) => {
+              event.stopPropagation();
+              void copyProjectNo(row.partNo);
+            }}
+          >
+            <icon-ic-round-content-copy class="text-14px" />
+          </NButton>
+        </div>
+      )
+    },
     { key: 'importedAt', title: $t('page.labor_management.labor_project.importedAt'), align: 'center', minWidth: 170,
       render: row => row.importedAt == null ? '—' : new Date(row.importedAt).toLocaleDateString() },
     { key: 'workpieceName', title: $t('page.labor_management.labor_project.workpieceName'), align: 'center', minWidth: 160,
@@ -292,7 +312,7 @@ function edit(id: string) {
         remote
         :row-key="row => row.id"
         :pagination="mobilePagination"
-        class="sm:h-full"
+        class="labor-project-table sm:h-full"
       />
       <LaborProjectOperateDrawer
         v-model:visible="drawerVisible"
@@ -303,3 +323,40 @@ function edit(id: string) {
     </NCard>
   </div>
 </template>
+
+<style scoped>
+.labor-project-table :deep(.n-data-table-tr--expanded > .n-data-table-td[colspan]) {
+  --detail-background: color-mix(in srgb, var(--n-merged-td-color) 96%, var(--n-td-text-color));
+  --n-merged-td-color-hover: var(--detail-background);
+  padding: 0;
+  background-color: var(--detail-background);
+}
+
+.labor-project-table :deep(.n-data-table-expand-trigger--expanded) {
+  color: rgb(var(--primary-color));
+}
+
+.labor-project-table :deep(.labor-project-detail) {
+  margin-block: 12px;
+  margin-inline: clamp(12px, 2.5vw, 32px) 12px;
+  border-inline-start: 2px solid var(--n-merged-border-color);
+  padding-inline-start: 12px;
+}
+
+.labor-project-table :deep(.labor-project-detail-heading) {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  color: var(--n-th-text-color);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.labor-project-table :deep(.labor-project-detail-count) {
+  color: var(--n-td-text-color);
+  font-size: 12px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+</style>

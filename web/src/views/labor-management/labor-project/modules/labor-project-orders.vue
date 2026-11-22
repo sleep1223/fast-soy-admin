@@ -1,4 +1,4 @@
-<script setup lang="tsx">
+<script setup lang="ts">
 import { computed, h, onBeforeUnmount, ref, watch } from 'vue';
 import type { DataTableColumns } from 'naive-ui';
 import { NButton } from 'naive-ui';
@@ -32,8 +32,28 @@ const columns = computed<DataTableColumns<Api.OrderManagementManage.Order>>(() =
         ? h(LaborOrderWorkHours, { orderNo: row.orderNo, skipPainting: props.skipPainting })
         : null
   },
-  { key: 'orderNo', title: $t('page.order_management.order.orderNo'), minWidth: 150,
-    render: row => <div class="flex-center gap-4px"><span>{row.orderNo}</span><NButton quaternary size="tiny" aria-label={$t('page.labor_management.labor_project.copy')} onClick={(event: MouseEvent) => { event.stopPropagation(); void copyOrderNo(row.orderNo); }}><icon-ic-round-content-copy class="text-14px" /></NButton></div> },
+  {
+    key: 'orderNo',
+    title: $t('page.order_management.order.orderNo'),
+    minWidth: 150,
+    render: row =>
+      h('div', { class: 'flex-center gap-4px' }, [
+        h('span', { class: 'font-medium' }, row.orderNo),
+        h(
+          NButton,
+          {
+            quaternary: true,
+            size: 'tiny',
+            'aria-label': $t('page.labor_management.labor_project.copy'),
+            onClick: (event: MouseEvent) => {
+              event.stopPropagation();
+              void copyOrderNo(row.orderNo);
+            }
+          },
+          { default: () => h('span', { class: 'icon-ic-round-content-copy text-14px', 'aria-hidden': 'true' }) }
+        )
+      ])
+  },
   { key: 'name', title: $t('page.order_management.order.name'), minWidth: 150 },
   { key: 'quantity', title: $t('page.order_management.order.quantity'), minWidth: 90 },
   { key: 'receivedQuantity', title: $t('page.order_management.order.receivedQuantity'), minWidth: 100 },
@@ -68,7 +88,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="px-12px py-8px">
+  <div class="labor-project-detail">
+    <h2 class="labor-project-detail-heading">
+      {{ $t('page.labor_management.labor_project.matchedOrders') }}
+      <span v-if="orders.length" class="labor-project-detail-count">{{ orders.length }}</span>
+    </h2>
     <NSpin :show="loading">
       <NAlert v-if="failed" type="error">
         {{ $t('page.labor_management.labor_project.ordersLoadFailed') }}
@@ -80,20 +104,15 @@ onBeforeUnmount(() => {
         v-else-if="!loading && !orders.length"
         :description="$t('page.labor_management.labor_project.noMatchedOrders')"
       />
-      <template v-else-if="orders.length">
-        <div class="mb-8px font-medium">
-          {{ $t('page.labor_management.labor_project.matchedOrders') }} · {{ orders.length }}
-        </div>
-        <NDataTable
-          v-model:expanded-row-keys="expandedOrderKeys"
-          :columns="columns"
-          :data="orders"
-          :row-key="row => row.id"
-          :pagination="{ pageSize: 10 }"
-          :scroll-x="1000"
-          size="small"
-        />
-      </template>
+      <NDataTable
+        v-else-if="orders.length"
+        v-model:expanded-row-keys="expandedOrderKeys"
+        :columns="columns"
+        :data="orders"
+        :row-key="row => row.id"
+        :scroll-x="1000"
+        size="small"
+      />
     </NSpin>
   </div>
 </template>

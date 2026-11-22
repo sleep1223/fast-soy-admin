@@ -23,6 +23,7 @@ declare module "@elegant-router/types" {
     "home": "/home";
     "labor-management": "/labor-management";
     "labor-management_labor-project": "/labor-management/labor-project";
+    "labor-management_labor-receipt": "/labor-management/labor-receipt";
     "labor-management_labor-work-hour": "/labor-management/labor-work-hour";
     "labor-management_labor-worker": "/labor-management/labor-worker";
     "login": "/login/:module(pwd-login|code-login|register|reset-pwd|bind-wechat)?";
@@ -109,6 +110,7 @@ declare module "@elegant-router/types" {
     | "login"
     | "home"
     | "labor-management_labor-project"
+    | "labor-management_labor-receipt"
     | "labor-management_labor-work-hour"
     | "labor-management_labor-worker"
     | "manage_api"

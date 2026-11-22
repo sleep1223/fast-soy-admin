@@ -21,6 +21,7 @@ export const views: Record<LastLevelRouteKey, RouteComponent | (() => Promise<Ro
   login: () => import("@/views/_builtin/login/index.vue"),
   home: () => import("@/views/home/index.vue"),
   "labor-management_labor-project": () => import("@/views/labor-management/labor-project/index.vue"),
+  "labor-management_labor-receipt": () => import("@/views/labor-management/labor-receipt/index.vue"),
   "labor-management_labor-work-hour": () => import("@/views/labor-management/labor-work-hour/index.vue"),
   "labor-management_labor-worker": () => import("@/views/labor-management/labor-worker/index.vue"),
   manage_api: () => import("@/views/manage/api/index.vue"),

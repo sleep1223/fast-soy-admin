@@ -2,6 +2,27 @@ import { request } from '../request';
 import { createExcelFormData } from '@/utils/excel';
 import type { ExcelDownload, ExcelImportOptions, ExcelImportResult, ExcelPreview } from '@/utils/excel';
 
+export function fetchGetLaborReceiptList(data: Api.LaborManagementManage.LaborReceiptSearchParams) {
+  return request<Api.LaborManagementManage.LaborReceiptList>({
+    url: '/business/labor_management/labor_receipts/search',
+    method: 'post',
+    data
+  });
+}
+
+export function fetchImportLaborReceipts(file: File, receiptMonth: string) {
+  const data = new FormData();
+  data.append('file', file);
+  data.append('receipt_month', receiptMonth);
+  return request<{ createdCount: number; skippedCount: number }>({
+    url: '/business/labor_management/labor_receipts/import-month',
+    method: 'post',
+    data,
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000
+  });
+}
+
 // ---- LaborProject ----
 export function fetchGetLaborProjectList(data?: Api.LaborManagementManage.LaborProjectSearchParams) {
   return request<Api.LaborManagementManage.LaborProjectList>({

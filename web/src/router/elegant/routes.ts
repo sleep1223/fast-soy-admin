@@ -67,6 +67,15 @@ export const generatedRoutes: GeneratedRoute[] = [
         }
       },
       {
+        name: 'labor-management_labor-receipt',
+        path: '/labor-management/labor-receipt',
+        component: 'view.labor-management_labor-receipt',
+        meta: {
+          title: 'labor-management_labor-receipt',
+          i18nKey: 'route.labor-management_labor-receipt'
+        }
+      },
+      {
         name: 'labor-management_labor-work-hour',
         path: '/labor-management/labor-work-hour',
         component: 'view.labor-management_labor-work-hour',

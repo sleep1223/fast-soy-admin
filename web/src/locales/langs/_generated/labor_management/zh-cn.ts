@@ -6,11 +6,21 @@ export default {
   route: {
     'labor-management': '劳务管理',
     'labor-management_labor-project': '劳务项目',
+    'labor-management_labor-receipt': '月度接收工件',
     'labor-management_labor-worker': '劳务人员',
     'labor-management_labor-work-hour': '工票对应的工时'
   },
   page: {
     labor_management: {
+      labor_receipt: {
+        title: '月度接收工件',
+        import: '导入表格',
+        confirmImport: '确认将表格导入所选月份？重复项目号将跳过。',
+        imported: '新增',
+        skipped: '跳过',
+        unmatched: '未匹配到订单',
+        loadFailed: '加载订单或工票失败，请重试'
+      },
       common: { status: '状态', form: { status: '请选择状态' } },
       labor_project: {
         viewOrders: '查看订单',
@@ -40,6 +50,8 @@ export default {
         editLaborWorker: '编辑劳务人员'
       },
       labor_work_hour: {
+        allocationMonth: '分配月份',
+        allocationMonthRequired: '请选择分配月份',
         ocrUpload: '选择图片识别工票码',
         ocrSelect: '选择识别文字并核对工票码',
         ocrEmpty: '未识别到文字，请手动输入',

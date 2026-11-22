@@ -5,11 +5,21 @@ export default {
   route: {
     'labor-management': 'LaborManagement',
     'labor-management_labor-project': 'Labor Project',
+    'labor-management_labor-receipt': 'Monthly Receipts',
     'labor-management_labor-worker': 'Labor Worker',
     'labor-management_labor-work-hour': 'Labor Work Hour'
   },
   page: {
     labor_management: {
+      labor_receipt: {
+        title: 'Monthly receipts',
+        import: 'Import spreadsheet',
+        confirmImport: 'Import this spreadsheet into the selected month? Existing project numbers are skipped.',
+        imported: 'Added',
+        skipped: 'Skipped',
+        unmatched: 'No matching orders',
+        loadFailed: 'Could not load orders or tickets. Try again.'
+      },
       common: { status: 'Status', form: { status: 'Please select status' } },
       labor_project: {
         viewOrders: 'View orders',
@@ -39,6 +49,8 @@ export default {
         editLaborWorker: 'Edit Labor Worker'
       },
       labor_work_hour: {
+        allocationMonth: 'Allocation month',
+        allocationMonthRequired: 'Select an allocation month',
         ocrUpload: 'Select an image to recognize the ticket code',
         ocrSelect: 'Select recognized text and check the ticket code',
         ocrEmpty: 'No text recognized. Enter the code manually.',

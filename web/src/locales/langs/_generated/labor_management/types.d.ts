@@ -5,6 +5,15 @@ declare global {
   namespace App.I18n {
     interface GeneratedPages {
       labor_management: {
+        labor_receipt: {
+          title: string;
+          import: string;
+          confirmImport: string;
+          imported: string;
+          skipped: string;
+          unmatched: string;
+          loadFailed: string;
+        };
         common: {
           status: string;
           form: { status: string };
@@ -37,6 +46,8 @@ declare global {
           editLaborWorker: string;
         };
         labor_work_hour: {
+          allocationMonth: string;
+          allocationMonthRequired: string;
           ocrUpload: string;
           ocrSelect: string;
           ocrEmpty: string;

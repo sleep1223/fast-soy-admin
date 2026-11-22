@@ -14,11 +14,13 @@ interface Props {
   rowData?: Api.LaborManagementManage.LaborWorkHour | null;
   workerOptions?: SelectOptionItem[];
   initialOrderNo?: string;
+  receiptId?: string | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   rowData: null,
   initialOrderNo: '',
+  receiptId: null,
   workerOptions: () => []
 });
 
@@ -70,7 +72,9 @@ function createDefaultModel(): Api.LaborManagementManage.LaborWorkHourAddParams 
     ticketCode: '',
     workHours: null,
     orderNo: props.initialOrderNo,
-    workerId: null
+    workerId: null,
+    receiptId: props.receiptId,
+    allocationMonth: null
   } as unknown as Api.LaborManagementManage.LaborWorkHourAddParams;
 }
 
@@ -94,6 +98,10 @@ function closeDrawer() {
 
 async function handleSubmit() {
   await validate();
+  if (props.receiptId && !model.value.allocationMonth) {
+    window.$message?.warning($t('page.labor_management.labor_work_hour.allocationMonthRequired'));
+    return;
+  }
 
   if (props.operateType === 'add') {
     const { error } = await fetchAddLaborWorkHour(model.value);
@@ -152,6 +160,7 @@ watch(visible, () => {
         <NFormItem :label="$t('page.labor_management.labor_work_hour.orderNo')" path="orderNo">
           <NInput
             v-model:value="model.orderNo"
+            :readonly="Boolean(props.receiptId)"
             :placeholder="$t('page.labor_management.labor_work_hour.form.orderNo')"
           />
         </NFormItem>
@@ -162,6 +171,15 @@ watch(visible, () => {
             clearable
             filterable
             :placeholder="$t('page.labor_management.labor_work_hour.form.worker')"
+          />
+        </NFormItem>
+        <NFormItem :label="$t('page.labor_management.labor_work_hour.allocationMonth')" path="allocationMonth">
+          <NDatePicker
+            v-model:formatted-value="model.allocationMonth"
+            type="month"
+            value-format="yyyy-MM-dd"
+            clearable
+            class="w-full"
           />
         </NFormItem>
       </NForm>

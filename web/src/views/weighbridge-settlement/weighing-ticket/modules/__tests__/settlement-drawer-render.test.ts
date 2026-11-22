@@ -1,7 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import * as naive from 'naive-ui';
 import { afterEach, expect, it, vi } from 'vitest';
-import { fetchSettlementRateOptions } from '@/service/api';
+import { fetchGetWeighingTicket, fetchSettlementRateOptions } from '@/service/api';
 import Drawer from '../weighing-ticket-operate-drawer.vue';
 
 vi.mock('@/locales', () => ({ $t: (key: string) => key }));
@@ -79,7 +79,9 @@ it('opens the add drawer with actual Naive UI controls and survives failed rate 
       data: null,
       error: new Error('rate lookup failed')
     } as never);
-    await wrapper.setProps({ visible: true });
+    vi.mocked(fetchGetWeighingTicket).mockResolvedValue({ data: null, error: null } as never);
+    // Reopening the same draft intentionally reuses it; a different record starts a new load.
+    await wrapper.setProps({ visible: true, operateType: 'edit', rowData: { id: 'other-ticket' } as never });
     await flushPromises();
     expect(document.body.textContent).toContain('page.weighbridge_settlement.settlement.loadFailed');
     expect(errors).toEqual([]);

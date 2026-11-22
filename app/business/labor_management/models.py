@@ -1,9 +1,20 @@
 # pyright: reportIncompatibleVariableOverride=false
-"""劳务人员与工票工时模型。"""
+"""劳务项目、人员与工票工时模型。"""
 
 from tortoise import fields
 
 from app.utils import AuditMixin, BaseModel
+
+
+class LaborProject(BaseModel, AuditMixin):
+    """劳务项目。"""
+
+    id = fields.IntField(primary_key=True)
+    part_no = fields.CharField(max_length=200, unique=True, description="项目号")
+
+    class Meta:
+        table = "biz_labor_management_project"
+        table_description = "劳务项目"
 
 
 class LaborWorker(BaseModel, AuditMixin):
@@ -27,6 +38,14 @@ class LaborWorkHour(BaseModel, AuditMixin):
     ticket_code = fields.CharField(max_length=100, unique=True, description="工票码")
     work_hours = fields.DecimalField(max_digits=12, decimal_places=2, description="工时（小时）")
     order_no = fields.CharField(max_length=100, db_index=True, description="订单号")
+    worker_id: int | None
+    worker: fields.ForeignKeyNullableRelation["LaborWorker"] = fields.ForeignKeyField(
+        "app_system.LaborWorker",
+        null=True,
+        related_name="work_hours",
+        on_delete=fields.RESTRICT,
+        description="劳务人员",
+    )
 
     class Meta:
         table = "biz_labor_management_work_hour"

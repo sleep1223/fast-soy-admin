@@ -43,6 +43,7 @@ declare namespace Api {
       {
         orderNo?: string;
         partNo?: string;
+        partNos?: string[];
         name?: string;
         unit?: string;
         orderDueDateStart?: string;

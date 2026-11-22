@@ -22,13 +22,13 @@ const stubs = {
   NDataTable: Table
 };
 
-it('matches exact project numbers across pages of fuzzy order results', async () => {
+it('loads exact project matches across pages', async () => {
   vi.mocked(fetchGetOrderList)
     .mockResolvedValueOnce({
       data: {
         records: [
           { id: '1', partNo: 'P1', orderNo: 'O1' },
-          { id: '2', partNo: 'P10', orderNo: 'O2' }
+          { id: '2', partNo: 'P1', orderNo: 'O2' }
         ],
         total: 3
       },
@@ -41,8 +41,10 @@ it('matches exact project numbers across pages of fuzzy order results', async ()
   const wrapper = mount(ProjectOrders, { props: { partNo: 'P1' }, global: { stubs } });
   await flushPromises();
   const data = JSON.parse(wrapper.find('[data-orders]').attributes('data-orders') ?? '[]');
-  expect(data.map((item: { orderNo: string }) => item.orderNo)).toEqual(['O1', 'O3']);
+  expect(data.map((item: { orderNo: string }) => item.orderNo)).toEqual(['O1', 'O2', 'O3']);
+  expect(fetchGetOrderList).toHaveBeenNthCalledWith(1, { current: 1, size: 1000, partNos: ['P1'] });
   expect(fetchGetOrderList).toHaveBeenCalledTimes(2);
+  expect(wrapper.emitted('loaded')?.[0]?.[0]).toHaveLength(3);
   wrapper.unmount();
   vi.clearAllMocks();
 });

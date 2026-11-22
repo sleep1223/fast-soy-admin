@@ -15,7 +15,7 @@ import LaborProjectOperateDrawer from './modules/labor-project-operate-drawer.vu
 import LaborProjectSearch from './modules/labor-project-search.vue';
 import LaborProjectOrders from './modules/labor-project-orders.vue';
 import PaintingStatusSwitch from './modules/painting-status-switch.vue';
-import { fetchMatchingOrders, projectHasTickets, summarizeOrders } from './modules/matching-orders';
+import { fetchMatchingOrdersForProjects, projectHasTickets, summarizeOrders } from './modules/matching-orders';
 
 const appStore = useAppStore();
 const { hasAuth } = useAuth();
@@ -73,8 +73,8 @@ async function loadSummary(row: Api.LaborManagementManage.LaborProject, generati
   const state = reactive<SummaryState>({ loading: true, failed: false, value: null });
   summaries.value[row.id] = state;
   try {
-    const orders = await fetchMatchingOrders(row.partNo, () => generation === summaryGeneration && summaries.value[row.id] === state);
-    if (orders) state.value = summarizeOrders(orders);
+    const orders = await fetchMatchingOrdersForProjects([row.partNo], () => generation === summaryGeneration && summaries.value[row.id] === state);
+    if (orders) state.value = summarizeOrders(orders.get(row.partNo) ?? []);
   } catch {
     if (generation === summaryGeneration && summaries.value[row.id] === state) state.failed = true;
   } finally {
@@ -82,12 +82,36 @@ async function loadSummary(row: Api.LaborManagementManage.LaborProject, generati
   }
 }
 
-function renderSummary(row: Api.LaborManagementManage.LaborProject, key: 'count' | 'name' | 'processRoute') {
+async function loadPageSummaries(rows: Api.LaborManagementManage.LaborProject[], generation: number) {
+  const states = new Map<string, SummaryState>();
+  for (const row of rows) {
+    const state = reactive<SummaryState>({ loading: true, failed: false, value: null });
+    states.set(row.id, state);
+    summaries.value[row.id] = state;
+  }
+  try {
+    const grouped = await fetchMatchingOrdersForProjects(rows.map(row => row.partNo), () => generation === summaryGeneration);
+    if (!grouped || generation !== summaryGeneration) return;
+    for (const row of rows) {
+      const state = states.get(row.id);
+      if (state && summaries.value[row.id] === state) state.value = summarizeOrders(grouped.get(row.partNo) ?? []);
+    }
+  } catch {
+    if (generation === summaryGeneration) {
+      for (const [id, state] of states) if (summaries.value[id] === state) state.failed = true;
+    }
+  } finally {
+    if (generation === summaryGeneration) {
+      for (const [id, state] of states) if (summaries.value[id] === state) state.loading = false;
+    }
+  }
+}
+
+function renderSummary(row: Api.LaborManagementManage.LaborProject, key: 'name' | 'processRoute') {
   const state = summaries.value[row.id];
   if (!state || state.loading) return <NSpin size="small" />;
   if (state.failed) return <NButton text type="error" onClick={() => loadSummary(row, summaryGeneration)}>{$t('page.labor_management.labor_project.retryOrders')}</NButton>;
   if (!state.value) return '—';
-  if (key === 'count') return state.value.count;
   const field = state.value[key];
   return <div class="flex-center gap-8px">
     <span>{field.value ?? '—'}</span>
@@ -96,6 +120,15 @@ function renderSummary(row: Api.LaborManagementManage.LaborProject, key: 'count'
       default: () => field.variants.map(value => value ?? $t('page.labor_management.labor_project.notProvided')).join(' / ')
     }}</NTooltip>}
   </div>;
+}
+
+async function copyProjectNo(value: string) {
+  try {
+    await navigator.clipboard.writeText(value);
+    window.$message?.success($t('page.labor_management.labor_project.copied'));
+  } catch {
+    window.$message?.error($t('page.labor_management.labor_project.copyFailed'));
+  }
 }
 
 
@@ -119,18 +152,17 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
     searchParams.size = params.pageSize;
   },
   columns: () => [
-    { type: 'expand', expandable: row => !row.skipPainting, renderExpand: row => <LaborProjectOrders partNo={row.partNo} skipPainting={row.skipPainting} /> },
+    { type: 'expand', expandable: row => !row.skipPainting, renderExpand: row => expandedRowKeys.value.includes(row.id) ? <LaborProjectOrders partNo={row.partNo} skipPainting={row.skipPainting} onLoaded={orders => { const state = summaries.value[row.id]; if (state) { state.value = summarizeOrders(orders); state.failed = false; state.loading = false; } }} /> : null },
     { type: 'selection', align: 'center', width: 48 },
     { key: 'index', title: $t('common.index'), width: 64, align: 'center', render: (_, index) => index + 1 },
-    { key: 'partNo', title: $t('page.labor_management.labor_project.partNo'), align: 'center', minWidth: 120 },
+    { key: 'partNo', title: $t('page.labor_management.labor_project.partNo'), align: 'center', minWidth: 140,
+      render: row => <div class="flex-center gap-4px"><span>{row.partNo}</span><NButton quaternary size="tiny" aria-label={$t('page.labor_management.labor_project.copy')} onClick={(event: MouseEvent) => { event.stopPropagation(); void copyProjectNo(row.partNo); }}><icon-ic-round-content-copy class="text-14px" /></NButton></div> },
     { key: 'importedAt', title: $t('page.labor_management.labor_project.importedAt'), align: 'center', minWidth: 170,
-      render: row => row.importedAt == null ? '—' : new Date(row.importedAt).toLocaleString() },
+      render: row => row.importedAt == null ? '—' : new Date(row.importedAt).toLocaleDateString() },
     { key: 'workpieceName', title: $t('page.labor_management.labor_project.workpieceName'), align: 'center', minWidth: 160,
       render: row => renderSummary(row, 'name') },
     { key: 'skipPainting', title: $t('page.labor_management.labor_project.skipPainting'), align: 'center', minWidth: 110,
       render: row => <PaintingStatusSwitch value={row.skipPainting} loading={savingPainting.has(row.id)} canEdit={hasAuth('B_LABOR_MANAGEMENT_LABOR_PROJECT_EDIT')} onChange={value => setSkipPainting(row, value, () => { void getData(); })} /> },
-    { key: 'orderCount', title: $t('page.labor_management.labor_project.orderCount'), align: 'center', minWidth: 110,
-      render: row => renderSummary(row, 'count') },
     { key: 'processRoutes', title: $t('page.order_management.order.processRoute'), align: 'center', minWidth: 180,
       render: row => renderSummary(row, 'processRoute') },
     {
@@ -166,13 +198,15 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
 watch([data, loading], ([rows, isLoading]) => {
   if (isLoading) {
     summaryGeneration += 1;
+    expandedRowKeys.value = [];
+    summaries.value = {};
     return;
   }
   const generation = ++summaryGeneration;
   const expandableIds = new Set(rows.filter(row => !row.skipPainting).map(row => row.id));
   expandedRowKeys.value = expandedRowKeys.value.filter(key => typeof key === 'string' && expandableIds.has(key));
   summaries.value = {};
-  for (const row of rows) void loadSummary(row, generation);
+  void loadPageSummaries(rows, generation);
 }, { immediate: true });
 onBeforeUnmount(() => { summaryGeneration += 1; });
 

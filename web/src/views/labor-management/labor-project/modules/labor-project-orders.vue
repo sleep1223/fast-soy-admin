@@ -1,23 +1,39 @@
-<script setup lang="ts">
+<script setup lang="tsx">
 import { computed, h, onBeforeUnmount, ref, watch } from 'vue';
 import type { DataTableColumns } from 'naive-ui';
+import { NButton } from 'naive-ui';
 import { $t } from '@/locales';
 import LaborOrderWorkHours from './labor-order-work-hours.vue';
 import { fetchMatchingOrders } from './matching-orders';
 
 const props = withDefaults(defineProps<{ partNo: string; skipPainting?: boolean }>(), { skipPainting: false });
+const emit = defineEmits<{ loaded: [orders: Api.OrderManagementManage.Order[]] }>();
 const orders = ref<Api.OrderManagementManage.Order[]>([]);
+const expandedOrderKeys = ref<(string | number)[]>([]);
 const loading = ref(false);
 const failed = ref(false);
 let requestSequence = 0;
+
+async function copyOrderNo(value: string) {
+  try {
+    await navigator.clipboard.writeText(value);
+    window.$message?.success($t('page.labor_management.labor_project.copied'));
+  } catch {
+    window.$message?.error($t('page.labor_management.labor_project.copyFailed'));
+  }
+}
 
 const columns = computed<DataTableColumns<Api.OrderManagementManage.Order>>(() => [
   {
     type: 'expand',
     expandable: () => true,
-    renderExpand: row => h(LaborOrderWorkHours, { orderNo: row.orderNo, skipPainting: props.skipPainting })
+    renderExpand: row =>
+      expandedOrderKeys.value.includes(row.id)
+        ? h(LaborOrderWorkHours, { orderNo: row.orderNo, skipPainting: props.skipPainting })
+        : null
   },
-  { key: 'orderNo', title: $t('page.order_management.order.orderNo'), minWidth: 150 },
+  { key: 'orderNo', title: $t('page.order_management.order.orderNo'), minWidth: 150,
+    render: row => <div class="flex-center gap-4px"><span>{row.orderNo}</span><NButton quaternary size="tiny" aria-label={$t('page.labor_management.labor_project.copy')} onClick={(event: MouseEvent) => { event.stopPropagation(); void copyOrderNo(row.orderNo); }}><icon-ic-round-content-copy class="text-14px" /></NButton></div> },
   { key: 'name', title: $t('page.order_management.order.name'), minWidth: 150 },
   { key: 'quantity', title: $t('page.order_management.order.quantity'), minWidth: 90 },
   { key: 'receivedQuantity', title: $t('page.order_management.order.receivedQuantity'), minWidth: 100 },
@@ -31,9 +47,13 @@ async function loadOrders() {
   loading.value = true;
   failed.value = false;
   orders.value = [];
+  expandedOrderKeys.value = [];
   try {
     const matches = await fetchMatchingOrders(partNo, () => current === requestSequence);
-    if (matches) orders.value = matches;
+    if (matches) {
+      orders.value = matches;
+      emit('loaded', matches);
+    }
   } catch {
     if (current === requestSequence) failed.value = true;
   } finally {
@@ -65,6 +85,7 @@ onBeforeUnmount(() => {
           {{ $t('page.labor_management.labor_project.matchedOrders') }} · {{ orders.length }}
         </div>
         <NDataTable
+          v-model:expanded-row-keys="expandedOrderKeys"
           :columns="columns"
           :data="orders"
           :row-key="row => row.id"

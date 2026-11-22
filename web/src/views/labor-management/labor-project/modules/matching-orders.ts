@@ -16,48 +16,60 @@ export function summarizeOrders(orders: Api.OrderManagementManage.Order[]) {
   };
 }
 
-/** The order search is fuzzy, so collect every page and retain exact project numbers. */
+/** Batch exact project-number searches while respecting the API's list and page limits. */
+export async function fetchMatchingOrdersForProjects(
+  partNos: string[],
+  isCurrent: () => boolean
+): Promise<Map<string, Api.OrderManagementManage.Order[]> | null> {
+  const unique = [...new Set(partNos)];
+  const grouped = new Map(unique.map(partNo => [partNo, [] as Api.OrderManagementManage.Order[]]));
+  for (let offset = 0; offset < unique.length; offset += 100) {
+    const batch = unique.slice(offset, offset + 100);
+    const allowed = new Set(batch);
+    let page = 1;
+    let received = 0;
+    let total = 0;
+    do {
+      const { data, error } = await fetchGetOrderList({ current: page, size: 1000, partNos: batch });
+      if (!isCurrent()) return null;
+      if (error || !data) throw new Error('Order lookup failed');
+      for (const order of data.records) {
+        if (!allowed.has(order.partNo)) throw new Error('Order lookup did not apply the exact project filter');
+        grouped.get(order.partNo)?.push(order);
+      }
+      received += data.records.length;
+      total = data.total;
+      if (!data.records.length && received < total) throw new Error('Incomplete order lookup');
+      if (!data.records.length) break;
+      page += 1;
+    } while (received < total);
+  }
+  return grouped;
+}
+
 export async function fetchMatchingOrders(
   partNo: string,
   isCurrent: () => boolean
 ): Promise<Api.OrderManagementManage.Order[] | null> {
-  const matches: Api.OrderManagementManage.Order[] = [];
-  let page = 1;
-  let received = 0;
-  let total = 0;
-  do {
-    const { data, error } = await fetchGetOrderList({ current: page, size: 1000, partNo });
-    if (!isCurrent()) return null;
-    if (error || !data) throw new Error('Order lookup failed');
-    matches.push(...data.records.filter(order => order.partNo === partNo));
-    received += data.records.length;
-    total = data.total;
-    if (!data.records.length && received < total) throw new Error('Incomplete order lookup');
-    if (!data.records.length) break;
-    page += 1;
-  } while (received < total);
-  return matches;
+  const grouped = await fetchMatchingOrdersForProjects([partNo], isCurrent);
+  return grouped === null ? null : (grouped.get(partNo) ?? []);
 }
 
 /** Fail closed if either orders or tickets cannot be checked. */
 export async function projectHasTickets(partNo: string, isCurrent: () => boolean): Promise<boolean | null> {
   const orders = await fetchMatchingOrders(partNo, isCurrent);
   if (!orders) return null;
-  for (const order of orders) {
-    let page = 1;
-    let received = 0;
-    let total = 0;
-    do {
-      const { data, error } = await fetchGetLaborWorkHourList({ current: page, size: 1000, orderNo: order.orderNo });
-      if (!isCurrent()) return null;
-      if (error || !data) throw new Error('Ticket lookup failed');
-      if (data.records.some(ticket => ticket.orderNo === order.orderNo)) return true;
-      received += data.records.length;
-      total = data.total;
-      if (!data.records.length && received < total) throw new Error('Incomplete ticket lookup');
-      if (!data.records.length) break;
-      page += 1;
-    } while (received < total);
+  const orderNos = [...new Set(orders.map(order => order.orderNo))];
+  for (let offset = 0; offset < orderNos.length; offset += 100) {
+    const batch = orderNos.slice(offset, offset + 100);
+    const { data, error } = await fetchGetLaborWorkHourList({ current: 1, size: 1, orderNos: batch });
+    if (!isCurrent()) return null;
+    if (error || !data) throw new Error('Ticket lookup failed');
+    if (data.total > 0) {
+      if (!data.records.length || !batch.includes(data.records[0].orderNo))
+        throw new Error('Ticket lookup did not apply the exact order filter');
+      return true;
+    }
   }
   return false;
 }

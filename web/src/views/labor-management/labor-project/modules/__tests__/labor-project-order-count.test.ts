@@ -2,7 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { expect, it, vi } from 'vitest';
 import { fetchGetOrderList } from '@/service/api';
 import OrderCount from '../labor-project-order-count.vue';
-import { summarizeOrders } from '../matching-orders';
+import { fetchMatchingOrdersForProjects, summarizeOrders } from '../matching-orders';
 
 vi.mock('@/locales', () => ({ $t: (key: string) => key }));
 vi.mock('@/service/api', () => ({ fetchGetOrderList: vi.fn() }));
@@ -10,6 +10,25 @@ const stubs = {
   NSpin: { template: '<span>loading</span>' },
   NButton: { emits: ['click'], template: '<button @click="$emit(\'click\')"><slot /></button>' }
 };
+
+it('loads summaries for multiple projects in one request and groups exact matches', async () => {
+  vi.mocked(fetchGetOrderList).mockResolvedValueOnce({
+    data: {
+      records: [
+        { partNo: 'P1', name: 'A' },
+        { partNo: 'P10', name: 'B' }
+      ],
+      total: 2
+    },
+    error: null
+  } as never);
+  const result = await fetchMatchingOrdersForProjects(['P1', 'P10', 'P2'], () => true);
+  expect(fetchGetOrderList).toHaveBeenCalledWith({ current: 1, size: 1000, partNos: ['P1', 'P10', 'P2'] });
+  expect(result?.get('P1')).toHaveLength(1);
+  expect(result?.get('P10')).toHaveLength(1);
+  expect(result?.get('P2')).toHaveLength(0);
+  vi.clearAllMocks();
+});
 
 it('summarizes process routes without dropping orders', () => {
   const orders = [
@@ -44,11 +63,11 @@ it('shows one value for matching fields and detects missing or different values'
 
 it('counts exact matches over all pages', async () => {
   vi.mocked(fetchGetOrderList)
-    .mockResolvedValueOnce({ data: { records: [{ partNo: 'P1' }, { partNo: 'P10' }], total: 3 }, error: null } as never)
+    .mockResolvedValueOnce({ data: { records: [{ partNo: 'P1' }, { partNo: 'P1' }], total: 3 }, error: null } as never)
     .mockResolvedValueOnce({ data: { records: [{ partNo: 'P1' }], total: 3 }, error: null } as never);
   const wrapper = mount(OrderCount, { props: { partNo: 'P1' }, global: { stubs } });
   await flushPromises();
-  expect(wrapper.text()).toBe('2');
+  expect(wrapper.text()).toBe('3');
   wrapper.unmount();
   vi.clearAllMocks();
 });

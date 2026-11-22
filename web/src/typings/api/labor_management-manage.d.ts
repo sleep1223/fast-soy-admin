@@ -81,6 +81,7 @@ declare namespace Api {
       {
         ticketCode?: string;
         orderNo?: string;
+        orderNos?: string[];
         workerId?: string;
         isAssigned?: boolean;
       } & CommonSearchParams

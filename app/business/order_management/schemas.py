@@ -43,6 +43,7 @@ class OrderUpdate(OrderBase): ...
 
 
 class OrderSearch(OrderBase, PageQueryBase):
+    part_nos: list[Annotated[str, Field(min_length=1, max_length=200)]] | None = Field(None, max_length=100, title="项目号列表")
     order_due_date_start: date | None = Field(None, title="订单完工期开始")
     order_due_date_end: date | None = Field(None, title="订单完工期结束")
     completed_date_start: date | None = Field(None, title="实际完工期开始")

@@ -7,19 +7,18 @@ vi.mock('@/service/api', () => ({ fetchGetOrderList: vi.fn(), fetchGetLaborWorkH
 it('finds tickets using exact project and order numbers', async () => {
   vi.mocked(fetchGetOrderList).mockResolvedValueOnce({
     data: {
-      records: [
-        { partNo: 'P1', orderNo: 'O1' },
-        { partNo: 'P10', orderNo: 'O2' }
-      ],
-      total: 2
+      records: [{ partNo: 'P1', orderNo: 'O1' }],
+      total: 1
     },
     error: null
   } as never);
-  vi.mocked(fetchGetLaborWorkHourList)
-    .mockResolvedValueOnce({ data: { records: [{ orderNo: 'O10' }], total: 2 }, error: null } as never)
-    .mockResolvedValueOnce({ data: { records: [{ orderNo: 'O1' }], total: 2 }, error: null } as never);
+  vi.mocked(fetchGetLaborWorkHourList).mockResolvedValueOnce({
+    data: { records: [{ orderNo: 'O1' }], total: 1 },
+    error: null
+  } as never);
   expect(await projectHasTickets('P1', () => true)).toBe(true);
-  expect(fetchGetLaborWorkHourList).toHaveBeenCalledTimes(2);
+  expect(fetchGetLaborWorkHourList).toHaveBeenCalledWith({ current: 1, size: 1, orderNos: ['O1'] });
+  expect(fetchGetLaborWorkHourList).toHaveBeenCalledTimes(1);
   vi.clearAllMocks();
 });
 

@@ -34,6 +34,10 @@ declare global {
           noMatchedOrders: string;
           ordersLoadFailed: string;
           retryOrders: string;
+          copy: string;
+          copied: string;
+          copyFailed: string;
+          ticketDropHint: string;
           pageTitle: string;
           partNo: string;
           form: { partNo: string };

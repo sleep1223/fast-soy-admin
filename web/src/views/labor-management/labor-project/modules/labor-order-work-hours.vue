@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, h, onBeforeUnmount, ref, watch } from 'vue';
 import type { DataTableColumns } from 'naive-ui';
-import { fetchAddLaborWorkHour, fetchGetLaborWorkHourList } from '@/service/api';
+import { fetchAddLaborWorkHour, fetchGetLaborWorkHourList, fetchOcrRecognize } from '@/service/api';
 import { useAuth } from '@/hooks/business/auth';
 import { $t } from '@/locales';
 import AssignmentStatusTag from '../../labor-work-hour/modules/assignment-status-tag.vue';
@@ -14,7 +14,70 @@ const failed = ref(false);
 const ticketCode = ref('');
 const workHours = ref<number | null>(null);
 const saving = ref(false);
+const ocrLoading = ref(false);
+const draggingTicketImage = ref(false);
+const ticketImageInput = ref<HTMLInputElement | null>(null);
+const ocrOptions = ref<{ label: string; value: string }[]>([]);
 let requestSequence = 0;
+let ocrSession = 0;
+
+async function recognizeTicketImage(file: File | undefined) {
+  if (!file || saving.value || ocrLoading.value) return;
+  const supported =
+    ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type) ||
+    /\.(jpe?g|png|gif|webp)$/i.test(file.name);
+  if (!supported || !file.size || file.size > 10 * 1024 * 1024) {
+    window.$message?.warning($t('ocrTools.invalid', { size: 10 }));
+    return;
+  }
+  const current = ++ocrSession;
+  ocrLoading.value = true;
+  ocrOptions.value = [];
+  try {
+    const { data, error } = await fetchOcrRecognize(file, { useCls: true });
+    if (current !== ocrSession) return;
+    if (error || !data) {
+      window.$message?.error($t('ocrTools.failed'));
+      return;
+    }
+    ocrOptions.value = [
+      ...new Set(data.items.map(item => item.text.trim()).filter(value => value && value.length <= 100))
+    ].map(value => ({
+      label: value,
+      value
+    }));
+    if (ocrOptions.value.length === 1) ticketCode.value = ocrOptions.value[0].value;
+    if (!ocrOptions.value.length) window.$message?.warning($t('page.labor_management.labor_work_hour.ocrEmpty'));
+  } catch {
+    if (current === ocrSession) window.$message?.error($t('ocrTools.failed'));
+  } finally {
+    if (current === ocrSession) ocrLoading.value = false;
+  }
+}
+
+function handleTicketImageChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const [file] = Array.from(input.files ?? []);
+  input.value = '';
+  void recognizeTicketImage(file);
+}
+
+function handleTicketImageDrop(event: DragEvent) {
+  draggingTicketImage.value = false;
+  const transfer = event.dataTransfer;
+  const files = Array.from(transfer?.files ?? []);
+  const droppedItems = Array.from(transfer?.items ?? [])
+    .map(item => (item.kind === 'file' ? item.getAsFile() : null))
+    .filter((item): item is File => item !== null);
+  const file = [...files, ...droppedItems].find(
+    item => item.type.startsWith('image/') || /\.(jpe?g|png|gif|webp)$/i.test(item.name)
+  );
+  if (!file) {
+    window.$message?.warning($t('ocrTools.dropUnavailable'));
+    return;
+  }
+  void recognizeTicketImage(file);
+}
 
 const columns = computed<DataTableColumns<Api.LaborManagementManage.LaborWorkHour>>(() => [
   { key: 'ticketCode', title: $t('page.labor_management.labor_work_hour.ticketCode'), minWidth: 160 },
@@ -45,7 +108,7 @@ async function loadWorkHours() {
   let total = 0;
   try {
     do {
-      const { data, error } = await fetchGetLaborWorkHourList({ current: page, size: 1000, orderNo });
+      const { data, error } = await fetchGetLaborWorkHourList({ current: page, size: 1000, orderNos: [orderNo] });
       if (current !== requestSequence) return;
       if (error || !data) {
         failed.value = true;
@@ -95,6 +158,10 @@ async function addWorkHour() {
 watch(
   () => props.orderNo,
   () => {
+    ocrSession += 1;
+    ocrLoading.value = false;
+    ocrOptions.value = [];
+    draggingTicketImage.value = false;
     ticketCode.value = '';
     workHours.value = null;
     loadWorkHours();
@@ -103,6 +170,7 @@ watch(
 );
 onBeforeUnmount(() => {
   requestSequence += 1;
+  ocrSession += 1;
 });
 </script>
 
@@ -114,11 +182,40 @@ onBeforeUnmount(() => {
       @submit.prevent="addWorkHour"
     >
       <NFormItem :label="$t('page.labor_management.labor_work_hour.ticketCode')" required>
-        <NInput
-          v-model:value="ticketCode"
-          :maxlength="100"
-          :disabled="saving"
-          :placeholder="$t('page.labor_management.labor_work_hour.form.ticketCode')"
+        <div
+          class="w-full rounded-6px border border-dashed p-8px transition-colors"
+          :class="draggingTicketImage ? 'border-primary bg-primary/5' : 'border-gray-300'"
+          @dragover.prevent="draggingTicketImage = true"
+          @dragleave.prevent="draggingTicketImage = false"
+          @drop.prevent="handleTicketImageDrop"
+        >
+          <NInput
+            v-model:value="ticketCode"
+            :maxlength="100"
+            :disabled="saving"
+            :placeholder="$t('page.labor_management.labor_work_hour.form.ticketCode')"
+          />
+          <div class="mt-6px flex items-center justify-between gap-8px">
+            <span class="text-12px text-gray-400">{{ $t('page.labor_management.labor_project.ticketDropHint') }}</span>
+            <NButton size="tiny" :loading="ocrLoading" :disabled="saving" @click="ticketImageInput?.click()">
+              {{ $t('page.labor_management.labor_work_hour.ocrUpload') }}
+            </NButton>
+          </div>
+          <input
+            ref="ticketImageInput"
+            type="file"
+            accept="image/*"
+            class="hidden"
+            :disabled="ocrLoading"
+            @change="handleTicketImageChange"
+          />
+        </div>
+        <NSelect
+          v-if="ocrOptions.length"
+          class="mt-6px"
+          :options="ocrOptions"
+          :placeholder="$t('page.labor_management.labor_work_hour.ocrSelect')"
+          @update:value="value => (ticketCode = value)"
         />
       </NFormItem>
       <NFormItem :label="$t('page.labor_management.labor_work_hour.workHours')" required>

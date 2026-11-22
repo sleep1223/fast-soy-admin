@@ -25,6 +25,9 @@ class LaborWorkHourController(CRUDBase[LaborWorkHour, LaborWorkHourCreate, Labor
             query &= Q(allocation_month__isnull=False) & Q(worker_id__isnull=False)
         elif assigned is False:
             query &= Q(allocation_month__isnull=True) | Q(worker_id__isnull=True)
+        order_nos = getattr(obj_in, "order_nos", None)
+        if order_nos is not None:
+            query &= Q(order_no__in=order_nos)
         return query
 
 

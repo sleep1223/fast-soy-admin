@@ -85,3 +85,4 @@ class LaborWorkHourUpdate(LaborWorkHourBase): ...
 
 class LaborWorkHourSearch(LaborWorkHourBase, PageQueryBase):
     is_assigned: bool | None = Field(None, title="是否已分配")
+    order_nos: list[Annotated[str, Field(min_length=1, max_length=100)]] | None = Field(None, max_length=100, title="订单号列表")

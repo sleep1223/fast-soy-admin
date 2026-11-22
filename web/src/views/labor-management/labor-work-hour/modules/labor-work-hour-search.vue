@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { $t } from '@/locales';
 
+type SelectOptionItem = { label: string; value: string | number };
+
+interface Props {
+  workerOptions?: SelectOptionItem[];
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  workerOptions: () => []
+});
+
 defineOptions({ name: 'LaborWorkHourSearch' });
 
 interface Emits {
@@ -46,6 +56,20 @@ function search() {
               <NInput
                 v-model:value="model.orderNo"
                 :placeholder="$t('page.labor_management.labor_work_hour.form.orderNo')"
+              />
+            </NFormItemGi>
+            <NFormItemGi
+              span="24 s:12 m:6"
+              :label="$t('page.labor_management.labor_work_hour.worker')"
+              path="workerId"
+              class="pr-24px"
+            >
+              <NSelect
+                v-model:value="model.workerId"
+                :options="props.workerOptions"
+                clearable
+                filterable
+                :placeholder="$t('page.labor_management.labor_work_hour.form.worker')"
               />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6">

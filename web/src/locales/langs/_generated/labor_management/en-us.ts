@@ -4,12 +4,25 @@
 export default {
   route: {
     'labor-management': 'LaborManagement',
+    'labor-management_labor-project': 'Labor Project',
     'labor-management_labor-worker': 'Labor Worker',
     'labor-management_labor-work-hour': 'Labor Work Hour'
   },
   page: {
     labor_management: {
       common: { status: 'Status', form: { status: 'Please select status' } },
+      labor_project: {
+        viewOrders: 'View orders',
+        orderName: 'Order name',
+        addTicket: 'Add ticket',
+        pageTitle: 'Labor Project',
+        partNo: 'partNo',
+        form: {
+          partNo: 'Please input partNo'
+        },
+        addLaborProject: 'Add Labor Project',
+        editLaborProject: 'Edit Labor Project'
+      },
       labor_worker: {
         pageTitle: 'Labor Worker',
         employeeNo: 'employeeNo',
@@ -26,14 +39,19 @@ export default {
         editLaborWorker: 'Edit Labor Worker'
       },
       labor_work_hour: {
+        ocrUpload: 'Select an image to recognize the ticket code',
+        ocrSelect: 'Select recognized text and check the ticket code',
+        ocrEmpty: 'No text recognized. Enter the code manually.',
         pageTitle: 'Labor Work Hour',
         ticketCode: 'ticketCode',
         workHours: 'workHours',
         orderNo: 'orderNo',
+        worker: 'worker',
         form: {
           ticketCode: 'Please input ticketCode',
           workHours: 'Please input workHours',
-          orderNo: 'Please input orderNo'
+          orderNo: 'Please input orderNo',
+          worker: 'Please select worker'
         },
         addLaborWorkHour: 'Add Labor Work Hour',
         editLaborWorkHour: 'Edit Labor Work Hour'

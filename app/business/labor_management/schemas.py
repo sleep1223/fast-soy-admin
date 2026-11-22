@@ -8,7 +8,27 @@ from typing import Annotated
 
 from pydantic import Field
 
-from app.utils import PageQueryBase, SchemaBase
+from app.utils import PageQueryBase, SchemaBase, SqidId
+
+# ============================================================
+# 劳务项目
+# ============================================================
+
+
+class LaborProjectBase(SchemaBase):
+    part_no: Annotated[str, Field(max_length=200)] | None = Field(None, title="项目号")
+
+
+class LaborProjectCreate(LaborProjectBase):
+    part_no: Annotated[str, Field(max_length=200)] = Field(title="项目号")
+
+
+class LaborProjectUpdate(LaborProjectBase): ...
+
+
+class LaborProjectSearch(LaborProjectBase, PageQueryBase):
+    pass
+
 
 # ============================================================
 # 劳务人员
@@ -44,12 +64,14 @@ class LaborWorkHourBase(SchemaBase):
     ticket_code: Annotated[str, Field(max_length=100)] | None = Field(None, title="工票码")
     work_hours: Decimal | None = Field(None, title="工时（小时）")
     order_no: Annotated[str, Field(max_length=100)] | None = Field(None, title="订单号")
+    worker_id: SqidId | None = Field(None, title="劳务人员")
 
 
 class LaborWorkHourCreate(LaborWorkHourBase):
     ticket_code: Annotated[str, Field(max_length=100)] = Field(title="工票码")
     work_hours: Decimal = Field(title="工时（小时）")
     order_no: Annotated[str, Field(max_length=100)] = Field(title="订单号")
+    worker_id: SqidId = Field(title="劳务人员")
 
 
 class LaborWorkHourUpdate(LaborWorkHourBase): ...

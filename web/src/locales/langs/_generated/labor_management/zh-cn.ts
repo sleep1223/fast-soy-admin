@@ -5,12 +5,25 @@
 export default {
   route: {
     'labor-management': '劳务管理',
+    'labor-management_labor-project': '劳务项目',
     'labor-management_labor-worker': '劳务人员',
     'labor-management_labor-work-hour': '工票对应的工时'
   },
   page: {
     labor_management: {
       common: { status: '状态', form: { status: '请选择状态' } },
+      labor_project: {
+        viewOrders: '查看订单',
+        orderName: '订单名称',
+        addTicket: '录入工票',
+        pageTitle: '劳务项目',
+        partNo: '项目号',
+        form: {
+          partNo: '请输入项目号'
+        },
+        addLaborProject: '新增劳务项目',
+        editLaborProject: '编辑劳务项目'
+      },
       labor_worker: {
         pageTitle: '劳务人员',
         employeeNo: '工号',
@@ -27,14 +40,19 @@ export default {
         editLaborWorker: '编辑劳务人员'
       },
       labor_work_hour: {
+        ocrUpload: '选择图片识别工票码',
+        ocrSelect: '选择识别文字并核对工票码',
+        ocrEmpty: '未识别到文字，请手动输入',
         pageTitle: '工票对应的工时',
         ticketCode: '工票码',
         workHours: '工时（小时）',
         orderNo: '订单号',
+        worker: '劳务人员',
         form: {
           ticketCode: '请输入工票码',
           workHours: '请输入工时（小时）',
-          orderNo: '请输入订单号'
+          orderNo: '请输入订单号',
+          worker: '请选择劳务人员'
         },
         addLaborWorkHour: '新增工票对应的工时',
         editLaborWorkHour: '编辑工票对应的工时'

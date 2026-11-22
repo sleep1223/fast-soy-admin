@@ -1,18 +1,26 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { jsonClone } from '@sa/utils';
-import { fetchAddLaborWorkHour, fetchUpdateLaborWorkHour } from '@/service/api';
+import { fetchAddLaborWorkHour, fetchOcrRecognize, fetchUpdateLaborWorkHour } from '@/service/api';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
 
 defineOptions({ name: 'LaborWorkHourOperateDrawer' });
 
+type SelectOptionItem = { label: string; value: string | number };
+
 interface Props {
   operateType: NaiveUI.TableOperateType;
   rowData?: Api.LaborManagementManage.LaborWorkHour | null;
+  workerOptions?: SelectOptionItem[];
+  initialOrderNo?: string;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  rowData: null,
+  initialOrderNo: '',
+  workerOptions: () => []
+});
 
 interface Emits {
   (e: 'submitted'): void;
@@ -32,19 +40,45 @@ const title = computed(() => {
 });
 
 const model = ref(createDefaultModel());
+const ocrOptions = ref<{ label: string; value: string }[]>([]);
+const ocrLoading = ref(false);
+let ocrSession = 0;
+
+async function recognizeTicket(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  const current = ++ocrSession;
+  ocrLoading.value = true;
+  ocrOptions.value = [];
+  try {
+    const { data, error } = await fetchOcrRecognize(file);
+    if (current !== ocrSession || error || !data) return;
+    ocrOptions.value = [...new Set(data.items.map(item => item.text.trim()).filter(Boolean))].map(value => ({
+      label: value,
+      value
+    }));
+    if (!ocrOptions.value.length) window.$message?.warning($t('page.labor_management.labor_work_hour.ocrEmpty'));
+  } finally {
+    if (current === ocrSession) ocrLoading.value = false;
+  }
+}
 
 function createDefaultModel(): Api.LaborManagementManage.LaborWorkHourAddParams {
   return {
     ticketCode: '',
     workHours: null,
-    orderNo: ''
+    orderNo: props.initialOrderNo,
+    workerId: null
   } as unknown as Api.LaborManagementManage.LaborWorkHourAddParams;
 }
 
 const rules: Record<string, App.Global.FormRule> = {
   ticketCode: defaultRequiredRule,
   workHours: defaultRequiredRule,
-  orderNo: defaultRequiredRule
+  orderNo: defaultRequiredRule,
+  workerId: defaultRequiredRule
 };
 
 function handleInitModel() {
@@ -75,6 +109,9 @@ async function handleSubmit() {
 }
 
 watch(visible, () => {
+  ocrSession += 1;
+  ocrLoading.value = false;
+  ocrOptions.value = [];
   if (visible.value) {
     handleInitModel();
     restoreValidation();
@@ -87,10 +124,22 @@ watch(visible, () => {
     <NDrawerContent :title="title" :native-scrollbar="false" closable>
       <NForm ref="formRef" :model="model" :rules="rules">
         <NFormItem :label="$t('page.labor_management.labor_work_hour.ticketCode')" path="ticketCode">
-          <NInput
-            v-model:value="model.ticketCode"
-            :placeholder="$t('page.labor_management.labor_work_hour.form.ticketCode')"
-          />
+          <NSpace vertical class="w-full">
+            <NInput
+              v-model:value="model.ticketCode"
+              :placeholder="$t('page.labor_management.labor_work_hour.form.ticketCode')"
+            />
+            <label>
+              {{ $t('page.labor_management.labor_work_hour.ocrUpload') }}
+              <input type="file" accept="image/*" :disabled="ocrLoading" @change="recognizeTicket" />
+            </label>
+            <NSelect
+              v-if="ocrOptions.length"
+              :options="ocrOptions"
+              :placeholder="$t('page.labor_management.labor_work_hour.ocrSelect')"
+              @update:value="value => (model.ticketCode = value)"
+            />
+          </NSpace>
         </NFormItem>
         <NFormItem :label="$t('page.labor_management.labor_work_hour.workHours')" path="workHours">
           <NInputNumber
@@ -104,6 +153,15 @@ watch(visible, () => {
           <NInput
             v-model:value="model.orderNo"
             :placeholder="$t('page.labor_management.labor_work_hour.form.orderNo')"
+          />
+        </NFormItem>
+        <NFormItem :label="$t('page.labor_management.labor_work_hour.worker')" path="workerId">
+          <NSelect
+            v-model:value="model.workerId"
+            :options="props.workerOptions"
+            clearable
+            filterable
+            :placeholder="$t('page.labor_management.labor_work_hour.form.worker')"
           />
         </NFormItem>
       </NForm>

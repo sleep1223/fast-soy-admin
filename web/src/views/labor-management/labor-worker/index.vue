@@ -112,8 +112,14 @@ function edit(id: string) {
           <ExcelTransfer
             :import-api="fetchImportLaborWorker"
             :preview-api="fetchPreviewImportLaborWorker"
-            :export-api="() => fetchExportLaborWorker(searchParams)"
-            :export-selected-api="ids => fetchExportLaborWorker({ ...searchParams, ids })"
+            :export-api="parentFields => fetchExportLaborWorker({ ...searchParams, parentFields })"
+            :export-selected-api="(ids, parentFields) => fetchExportLaborWorker({ ...searchParams, ids, parentFields })"
+            :export-parent-fields="[
+              { name: 'employee_no', label: $t('page.labor_management.labor_worker.employeeNo') },
+              { name: 'trade', label: $t('page.labor_management.labor_worker.trade') },
+              { name: 'name', label: $t('page.labor_management.labor_worker.name') },
+              { name: 'remark', label: $t('page.labor_management.labor_worker.remark') }
+            ]"
             :selected-ids="checkedRowKeys"
             :template-api="fetchLaborWorkerImportTemplate"
             :can-import="hasAuth('B_LABOR_MANAGEMENT_LABOR_WORKER_IMPORT')"

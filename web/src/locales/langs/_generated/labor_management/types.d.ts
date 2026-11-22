@@ -9,6 +9,18 @@ declare global {
           status: string;
           form: { status: string };
         };
+        labor_project: {
+          viewOrders: string;
+          orderName: string;
+          addTicket: string;
+          pageTitle: string;
+          partNo: string;
+          form: {
+            partNo: string;
+          };
+          addLaborProject: string;
+          editLaborProject: string;
+        };
         labor_worker: {
           pageTitle: string;
           employeeNo: string;
@@ -25,14 +37,19 @@ declare global {
           editLaborWorker: string;
         };
         labor_work_hour: {
+          ocrUpload: string;
+          ocrSelect: string;
+          ocrEmpty: string;
           pageTitle: string;
           ticketCode: string;
           workHours: string;
           orderNo: string;
+          worker: string;
           form: {
             ticketCode: string;
             workHours: string;
             orderNo: string;
+            worker: string;
           };
           addLaborWorkHour: string;
           editLaborWorkHour: string;

@@ -1,11 +1,12 @@
 <script setup lang="tsx">
-import { reactive } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import { NButton, NPopconfirm } from 'naive-ui';
 import ExcelTransfer from '@/components/advanced/excel-transfer.vue';
 
 import {
   fetchBatchDeleteLaborWorkHour, fetchDeleteLaborWorkHour, fetchGetLaborWorkHourList,
-  fetchExportLaborWorkHour, fetchImportLaborWorkHour, fetchPreviewImportLaborWorkHour, fetchLaborWorkHourImportTemplate
+  fetchExportLaborWorkHour, fetchImportLaborWorkHour, fetchPreviewImportLaborWorkHour, fetchLaborWorkHourImportTemplate,
+  fetchGetLaborWorkerList
 } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
@@ -17,6 +18,26 @@ import LaborWorkHourSearch from './modules/labor-work-hour-search.vue';
 const appStore = useAppStore();
 const { hasAuth } = useAuth();
 
+type SelectOptionItem = { label: string; value: string | number };
+
+const workerOptions = ref<SelectOptionItem[]>([]);
+
+async function loadWorkers() {
+  const options: SelectOptionItem[] = [];
+  let page = 1;
+  let total = 0;
+  do {
+    const { data: result, error } = await fetchGetLaborWorkerList({ current: page, size: 1000 });
+    if (error || !result) return;
+    options.push(...result.records.map(worker => ({ label: `${worker.name}（${worker.employeeNo}）`, value: worker.id })));
+    total = result.total;
+    if (!result.records.length) break;
+    page += 1;
+  } while (options.length < total);
+  workerOptions.value = options;
+}
+
+onMounted(loadWorkers);
 
 
 const defaultSearchParams: Api.LaborManagementManage.LaborWorkHourSearchParams = {
@@ -24,6 +45,7 @@ const defaultSearchParams: Api.LaborManagementManage.LaborWorkHourSearchParams =
   size: 10,
   ticketCode: null,
   orderNo: null,
+  workerId: null,
 };
 
 const searchParams: Api.LaborManagementManage.LaborWorkHourSearchParams = reactive({ ...defaultSearchParams });
@@ -41,6 +63,8 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
     { key: 'ticketCode', title: $t('page.labor_management.labor_work_hour.ticketCode'), align: 'center', minWidth: 120 },
     { key: 'workHours', title: $t('page.labor_management.labor_work_hour.workHours'), align: 'center', minWidth: 120 },
     { key: 'orderNo', title: $t('page.labor_management.labor_work_hour.orderNo'), align: 'center', minWidth: 120 },
+    { key: 'workerId', title: $t('page.labor_management.labor_work_hour.worker'), align: 'center', minWidth: 120,
+      render: row => workerOptions.value.find(option => option.value === row.workerId)?.label ?? '—' },
     {
       key: 'operate',
       title: $t('common.operate'),
@@ -98,7 +122,12 @@ function edit(id: string) {
 
 <template>
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <LaborWorkHourSearch v-model:model="searchParams" @reset="resetSearchParams" @search="getDataByPage" />
+    <LaborWorkHourSearch
+      v-model:model="searchParams"
+      :worker-options="workerOptions"
+      @reset="resetSearchParams"
+      @search="getDataByPage"
+    />
     <NCard
       :title="$t('page.labor_management.labor_work_hour.pageTitle')"
       :bordered="false"
@@ -161,6 +190,7 @@ function edit(id: string) {
         v-model:visible="drawerVisible"
         :operate-type="operateType"
         :row-data="editingData"
+        :worker-options="workerOptions"
         @submitted="getDataByPage"
       />
     </NCard>

@@ -5,14 +5,18 @@ import { $t } from '@/locales';
 import LaborOrderWorkHours from './labor-order-work-hours.vue';
 import { fetchMatchingOrders } from './matching-orders';
 
-const props = defineProps<{ partNo: string }>();
+const props = withDefaults(defineProps<{ partNo: string; skipPainting?: boolean }>(), { skipPainting: false });
 const orders = ref<Api.OrderManagementManage.Order[]>([]);
 const loading = ref(false);
 const failed = ref(false);
 let requestSequence = 0;
 
 const columns = computed<DataTableColumns<Api.OrderManagementManage.Order>>(() => [
-  { type: 'expand', expandable: () => true, renderExpand: row => h(LaborOrderWorkHours, { orderNo: row.orderNo }) },
+  {
+    type: 'expand',
+    expandable: () => true,
+    renderExpand: row => h(LaborOrderWorkHours, { orderNo: row.orderNo, skipPainting: props.skipPainting })
+  },
   { key: 'orderNo', title: $t('page.order_management.order.orderNo'), minWidth: 150 },
   { key: 'name', title: $t('page.order_management.order.name'), minWidth: 150 },
   { key: 'quantity', title: $t('page.order_management.order.quantity'), minWidth: 90 },

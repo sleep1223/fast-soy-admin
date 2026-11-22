@@ -10,6 +10,19 @@ declare global {
           form: { status: string };
         };
         labor_project: {
+          importedAt: string;
+          paintingUnavailable: string;
+          paintingUnavailableHint: string;
+          workpieceName: string;
+          inconsistent: string;
+          notProvided: string;
+          paintingStatus: string;
+          paintingRequired: string;
+          paintingAll: string;
+          ticketsExistTitle: string;
+          ticketsExistConfirm: string;
+          verifyTicketsFailed: string;
+          skipPainting: string;
           orderCount: string;
           ticketCodeRequired: string;
           createWorkHourFailed: string;

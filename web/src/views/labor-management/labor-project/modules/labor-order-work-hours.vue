@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/business/auth';
 import { $t } from '@/locales';
 import AssignmentStatusTag from '../../labor-work-hour/modules/assignment-status-tag.vue';
 
-const props = defineProps<{ orderNo: string }>();
+const props = withDefaults(defineProps<{ orderNo: string; skipPainting?: boolean }>(), { skipPainting: false });
 const { hasAuth } = useAuth();
 const records = ref<Api.LaborManagementManage.LaborWorkHour[]>([]);
 const loading = ref(false);
@@ -66,7 +66,7 @@ async function loadWorkHours() {
 }
 
 async function addWorkHour() {
-  if (saving.value || !hasAuth('B_LABOR_MANAGEMENT_LABOR_WORK_HOUR_CREATE')) return;
+  if (saving.value || props.skipPainting || !hasAuth('B_LABOR_MANAGEMENT_LABOR_WORK_HOUR_CREATE')) return;
   const code = ticketCode.value.trim();
   if (!code || code.length > 100) {
     window.$message?.warning($t('page.labor_management.labor_project.ticketCodeRequired'));
@@ -108,7 +108,11 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="px-12px py-8px">
-    <NForm v-if="hasAuth('B_LABOR_MANAGEMENT_LABOR_WORK_HOUR_CREATE')" inline @submit.prevent="addWorkHour">
+    <NForm
+      v-if="!props.skipPainting && hasAuth('B_LABOR_MANAGEMENT_LABOR_WORK_HOUR_CREATE')"
+      inline
+      @submit.prevent="addWorkHour"
+    >
       <NFormItem :label="$t('page.labor_management.labor_work_hour.ticketCode')" required>
         <NInput
           v-model:value="ticketCode"

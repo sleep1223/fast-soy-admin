@@ -35,7 +35,8 @@ const model = ref(createDefaultModel());
 
 function createDefaultModel(): Api.LaborManagementManage.LaborProjectAddParams {
   return {
-    partNo: ''
+    partNo: '',
+    skipPainting: false
   } as unknown as Api.LaborManagementManage.LaborProjectAddParams;
 }
 

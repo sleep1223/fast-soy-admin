@@ -12,6 +12,8 @@ class LaborProject(BaseModel, AuditMixin):
     id = fields.IntField(primary_key=True)
     # 与订单资料的 part_no 按值匹配，一个项目可对应多个订单。
     part_no = fields.CharField(max_length=200, unique=True, description="项目号")
+    skip_painting = fields.BooleanField(default=False, db_default=False, description="无需刷漆")
+    imported_at = fields.DatetimeField(null=True, description="首次导入时间")
 
     class Meta:
         table = "biz_labor_management_project"

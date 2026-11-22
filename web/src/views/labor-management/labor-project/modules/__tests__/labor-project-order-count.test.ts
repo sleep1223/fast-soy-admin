@@ -11,7 +11,7 @@ const stubs = {
   NButton: { emits: ['click'], template: '<button @click="$emit(\'click\')"><slot /></button>' }
 };
 
-it('deduplicates nonempty process routes and customers without dropping orders', () => {
+it('summarizes process routes without dropping orders', () => {
   const orders = [
     { processRoute: ' 切割 ', customer: '客户甲' },
     { processRoute: '切割', customer: '客户乙' },
@@ -20,9 +20,26 @@ it('deduplicates nonempty process routes and customers without dropping orders',
   ] as Api.OrderManagementManage.Order[];
   expect(summarizeOrders(orders)).toEqual({
     count: 4,
-    processRoutes: ['切割', '焊接'],
-    customers: ['客户甲', '客户乙']
+    name: { value: null, variants: [null], inconsistent: false },
+    processRoute: { value: '切割', variants: ['切割', '焊接', null], inconsistent: true }
   });
+});
+
+it('shows one value for matching fields and detects missing or different values', () => {
+  const same = summarizeOrders([
+    { name: '工件A', processRoute: ' 喷漆 ' },
+    { name: '工件A', processRoute: '喷漆' }
+  ] as Api.OrderManagementManage.Order[]);
+  expect(same.name).toEqual({ value: '工件A', variants: ['工件A'], inconsistent: false });
+  expect(same.processRoute).toEqual({ value: '喷漆', variants: ['喷漆'], inconsistent: false });
+  const conflict = summarizeOrders([
+    { name: '工件A', processRoute: null },
+    { name: '工件B', processRoute: '喷漆' }
+  ] as Api.OrderManagementManage.Order[]);
+  expect(conflict.name.inconsistent).toBe(true);
+  expect(conflict.processRoute.variants).toEqual([null, '喷漆']);
+  expect(conflict.processRoute.inconsistent).toBe(true);
+  expect(summarizeOrders([]).name).toEqual({ value: null, variants: [], inconsistent: false });
 });
 
 it('counts exact matches over all pages', async () => {

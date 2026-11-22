@@ -12,6 +12,20 @@ export default {
     labor_management: {
       common: { status: 'Status', form: { status: 'Please select status' } },
       labor_project: {
+        importedAt: 'First import time',
+        paintingUnavailable: 'Status unavailable',
+        paintingUnavailableHint: 'Apply the painting field migration and reload the backend first',
+        workpieceName: 'Workpiece name',
+        inconsistent: 'Inconsistent',
+        notProvided: 'Not provided',
+        paintingStatus: 'Painting',
+        paintingRequired: 'Painting required',
+        paintingAll: 'All',
+        ticketsExistTitle: 'Tickets already exist',
+        ticketsExistConfirm:
+          'This project has existing tickets. Mark it as requiring no painting? Check that you selected the right project. Existing tickets will be kept.',
+        verifyTicketsFailed: 'Could not check tickets. Check order and ticket access and try again.',
+        skipPainting: 'No painting required',
         orderCount: 'Orders',
         ticketCodeRequired: 'Enter a ticket code of at most 100 characters',
         createWorkHourFailed: 'Could not create the ticket. Please try again.',

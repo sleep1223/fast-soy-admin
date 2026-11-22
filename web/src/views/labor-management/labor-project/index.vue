@@ -1,11 +1,11 @@
 <script setup lang="tsx">
 import { onBeforeUnmount, reactive, ref, watch } from 'vue';
-import { NButton, NPopconfirm, NSpin } from 'naive-ui';
+import { NButton, NPopconfirm, NSpin, NTag, NTooltip } from 'naive-ui';
 import ExcelTransfer from '@/components/advanced/excel-transfer.vue';
 
 import {
   fetchBatchDeleteLaborProject, fetchDeleteLaborProject, fetchGetLaborProjectList,
-  fetchExportLaborProject, fetchImportLaborProject, fetchPreviewImportLaborProject, fetchLaborProjectImportTemplate
+  fetchExportLaborProject, fetchImportLaborProject, fetchPreviewImportLaborProject, fetchLaborProjectImportTemplate, fetchUpdateLaborProject
 } from '@/service/api';
 import { useAppStore } from '@/store/modules/app';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
@@ -14,14 +14,60 @@ import { $t } from '@/locales';
 import LaborProjectOperateDrawer from './modules/labor-project-operate-drawer.vue';
 import LaborProjectSearch from './modules/labor-project-search.vue';
 import LaborProjectOrders from './modules/labor-project-orders.vue';
-import { fetchMatchingOrders, summarizeOrders } from './modules/matching-orders';
+import PaintingStatusSwitch from './modules/painting-status-switch.vue';
+import { fetchMatchingOrders, projectHasTickets, summarizeOrders } from './modules/matching-orders';
 
 const appStore = useAppStore();
 const { hasAuth } = useAuth();
+const savingPainting = reactive(new Set<string>());
+const expandedRowKeys = ref<(string | number)[]>([]);
+let summaryGeneration = 0;
+
+async function setSkipPainting(row: Api.LaborManagementManage.LaborProject, value: boolean, refresh: () => void) {
+  if (savingPainting.has(row.id) || !hasAuth('B_LABOR_MANAGEMENT_LABOR_PROJECT_EDIT')) return;
+  savingPainting.add(row.id);
+  const generation = summaryGeneration;
+  try {
+    if (value) {
+      const hasTickets = await projectHasTickets(row.partNo, () => generation === summaryGeneration);
+      if (hasTickets === null || generation !== summaryGeneration) return;
+      if (hasTickets) {
+        const dialog = window.$dialog;
+        if (!dialog) {
+          window.$message?.error($t('page.labor_management.labor_project.verifyTicketsFailed'));
+          return;
+        }
+        const confirmed = await new Promise<boolean>(resolve => {
+          dialog.warning({
+            title: $t('page.labor_management.labor_project.ticketsExistTitle'),
+            content: $t('page.labor_management.labor_project.ticketsExistConfirm'),
+            positiveText: $t('common.confirm'),
+            negativeText: $t('common.cancel'),
+            closable: false,
+            maskClosable: false,
+            closeOnEsc: false,
+            onPositiveClick: () => resolve(true),
+            onNegativeClick: () => resolve(false)
+          });
+        });
+        if (!confirmed || generation !== summaryGeneration) return;
+      }
+    }
+    const { error } = await fetchUpdateLaborProject({ id: row.id, skipPainting: value });
+    if (!error) {
+      row.skipPainting = value;
+      if (value) expandedRowKeys.value = expandedRowKeys.value.filter(key => key !== row.id);
+      refresh();
+    }
+  } catch {
+    window.$message?.error($t('page.labor_management.labor_project.verifyTicketsFailed'));
+  } finally {
+    savingPainting.delete(row.id);
+  }
+}
 type OrderSummary = ReturnType<typeof summarizeOrders>;
 type SummaryState = { loading: boolean; failed: boolean; value: OrderSummary | null };
 const summaries = ref<Record<string, SummaryState>>({});
-let summaryGeneration = 0;
 
 async function loadSummary(row: Api.LaborManagementManage.LaborProject, generation: number) {
   const state = reactive<SummaryState>({ loading: true, failed: false, value: null });
@@ -36,12 +82,20 @@ async function loadSummary(row: Api.LaborManagementManage.LaborProject, generati
   }
 }
 
-function renderSummary(row: Api.LaborManagementManage.LaborProject, key: keyof OrderSummary) {
+function renderSummary(row: Api.LaborManagementManage.LaborProject, key: 'count' | 'name' | 'processRoute') {
   const state = summaries.value[row.id];
   if (!state || state.loading) return <NSpin size="small" />;
   if (state.failed) return <NButton text type="error" onClick={() => loadSummary(row, summaryGeneration)}>{$t('page.labor_management.labor_project.retryOrders')}</NButton>;
-  const value = state.value?.[key];
-  return Array.isArray(value) ? value.join(' / ') || '—' : value ?? '—';
+  if (!state.value) return '—';
+  if (key === 'count') return state.value.count;
+  const field = state.value[key];
+  return <div class="flex-center gap-8px">
+    <span>{field.value ?? '—'}</span>
+    {field.inconsistent && <NTooltip trigger="hover">{{
+      trigger: () => <NTag size="small" type="warning">{$t('page.labor_management.labor_project.inconsistent')}</NTag>,
+      default: () => field.variants.map(value => value ?? $t('page.labor_management.labor_project.notProvided')).join(' / ')
+    }}</NTooltip>}
+  </div>;
 }
 
 
@@ -50,6 +104,9 @@ const defaultSearchParams: Api.LaborManagementManage.LaborProjectSearchParams = 
   current: 1,
   size: 10,
   partNo: null,
+  skipPainting: false,
+  importedAtStart: null,
+  importedAtEnd: null,
 };
 
 const searchParams: Api.LaborManagementManage.LaborProjectSearchParams = reactive({ ...defaultSearchParams });
@@ -62,16 +119,20 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
     searchParams.size = params.pageSize;
   },
   columns: () => [
-    { type: 'expand', expandable: () => true, renderExpand: row => <LaborProjectOrders partNo={row.partNo} /> },
+    { type: 'expand', expandable: row => !row.skipPainting, renderExpand: row => <LaborProjectOrders partNo={row.partNo} skipPainting={row.skipPainting} /> },
     { type: 'selection', align: 'center', width: 48 },
     { key: 'index', title: $t('common.index'), width: 64, align: 'center', render: (_, index) => index + 1 },
     { key: 'partNo', title: $t('page.labor_management.labor_project.partNo'), align: 'center', minWidth: 120 },
+    { key: 'importedAt', title: $t('page.labor_management.labor_project.importedAt'), align: 'center', minWidth: 170,
+      render: row => row.importedAt == null ? '—' : new Date(row.importedAt).toLocaleString() },
+    { key: 'workpieceName', title: $t('page.labor_management.labor_project.workpieceName'), align: 'center', minWidth: 160,
+      render: row => renderSummary(row, 'name') },
+    { key: 'skipPainting', title: $t('page.labor_management.labor_project.skipPainting'), align: 'center', minWidth: 110,
+      render: row => <PaintingStatusSwitch value={row.skipPainting} loading={savingPainting.has(row.id)} canEdit={hasAuth('B_LABOR_MANAGEMENT_LABOR_PROJECT_EDIT')} onChange={value => setSkipPainting(row, value, () => { void getData(); })} /> },
     { key: 'orderCount', title: $t('page.labor_management.labor_project.orderCount'), align: 'center', minWidth: 110,
       render: row => renderSummary(row, 'count') },
     { key: 'processRoutes', title: $t('page.order_management.order.processRoute'), align: 'center', minWidth: 180,
-      render: row => renderSummary(row, 'processRoutes') },
-    { key: 'customers', title: $t('page.order_management.order.customer'), align: 'center', minWidth: 140,
-      render: row => renderSummary(row, 'customers') },
+      render: row => renderSummary(row, 'processRoute') },
     {
       key: 'operate',
       title: $t('common.operate'),
@@ -108,6 +169,8 @@ watch([data, loading], ([rows, isLoading]) => {
     return;
   }
   const generation = ++summaryGeneration;
+  const expandableIds = new Set(rows.filter(row => !row.skipPainting).map(row => row.id));
+  expandedRowKeys.value = expandedRowKeys.value.filter(key => typeof key === 'string' && expandableIds.has(key));
   summaries.value = {};
   for (const row of rows) void loadSummary(row, generation);
 }, { immediate: true });
@@ -185,6 +248,7 @@ function edit(id: string) {
       </template>
       <NDataTable
         v-model:checked-row-keys="checkedRowKeys"
+        v-model:expanded-row-keys="expandedRowKeys"
         :columns="columns"
         :data="data"
         size="small"

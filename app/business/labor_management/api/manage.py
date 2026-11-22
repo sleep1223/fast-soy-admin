@@ -2,7 +2,11 @@
 labor_management 管理接口 — CRUD。
 """
 
-from fastapi import APIRouter
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, File, Form, UploadFile
+from pydantic import ValidationError
+from starlette.concurrency import run_in_threadpool
 
 from app.business.labor_management.controllers import labor_project_controller, labor_work_hour_controller, labor_worker_controller
 from app.business.labor_management.schemas import (
@@ -16,7 +20,8 @@ from app.business.labor_management.schemas import (
     LaborWorkHourSearch,
     LaborWorkHourUpdate,
 )
-from app.utils import CRUDRouter, ExcelConfig, ExcelDetail, SearchFieldConfig, require_buttons
+from app.business.labor_management.services import import_labor_projects
+from app.utils import BizError, Code, CRUDRouter, ExcelConfig, ExcelDetail, ExcelImportOptions, SearchFieldConfig, Success, parse_excel, require_buttons
 
 labor_project_crud = CRUDRouter(
     prefix="/labor_projects",
@@ -26,7 +31,7 @@ labor_project_crud = CRUDRouter(
     update_schema=LaborProjectUpdate,
     list_schema=LaborProjectSearch,
     route_key_prefix="labor_management.labor_projects",
-    search_fields=SearchFieldConfig(contains_fields=["part_no"]),
+    search_fields=SearchFieldConfig(contains_fields=["part_no"], exact_fields=["skip_painting"], range_fields=["imported_at"]),
     action_dependencies={
         "create": [require_buttons("B_LABOR_MANAGEMENT_LABOR_PROJECT_CREATE")],
         "update": [require_buttons("B_LABOR_MANAGEMENT_LABOR_PROJECT_EDIT")],
@@ -38,6 +43,29 @@ labor_project_crud = CRUDRouter(
     },
     summary_prefix="劳务项目",
 )
+
+
+@labor_project_crud.override("import")
+async def import_projects(file: UploadFile = File(...), options: str | None = Form(None)) -> Success:
+    """沿用项目 Excel 解析及字段映射，并在导入时记录首次导入时间。"""
+    try:
+        if not (file.filename or "").lower().endswith(".xlsx"):
+            raise BizError(Code.REQUEST_VALIDATION, "只支持 .xlsx 文件")
+        content = await file.read(5 * 1024 * 1024 + 1)
+        if len(content) > 5 * 1024 * 1024:
+            raise BizError(Code.REQUEST_VALIDATION, "Excel 文件不能超过 5MB")
+        try:
+            selection = ExcelImportOptions.model_validate_json(options) if options is not None else ExcelImportOptions()
+        except ValidationError as exc:
+            raise BizError(Code.REQUEST_VALIDATION, "Excel 导入选项无效") from exc
+        result = await run_in_threadpool(parse_excel, content, LaborProjectCreate, ExcelConfig(fields=("part_no",)), selection)
+        if result.preview.errors:
+            raise BizError(Code.REQUEST_VALIDATION, result.preview.errors[0])
+        created, updated = await import_labor_projects(result.rows, datetime.now(timezone.utc))
+        return Success(msg="导入成功", data={"importedCount": len(result.rows), "createdCount": created, "updatedCount": updated})
+    finally:
+        await file.close()
+
 
 labor_worker_crud = CRUDRouter(
     prefix="/labor_workers",

@@ -3,7 +3,7 @@
 labor_management — 请求/响应 Schema。
 """
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated
 
@@ -14,17 +14,20 @@ from app.utils import PageQueryBase, SchemaBase, SqidId
 
 class LaborProjectBase(SchemaBase):
     part_no: Annotated[str, Field(max_length=200)] | None = Field(None, title="项目号")
+    skip_painting: bool | None = Field(None, title="无需刷漆")
 
 
 class LaborProjectCreate(LaborProjectBase):
     part_no: Annotated[str, Field(max_length=200)] = Field(title="项目号")
+    skip_painting: bool = Field(False, title="无需刷漆")
 
 
 class LaborProjectUpdate(LaborProjectBase): ...
 
 
 class LaborProjectSearch(LaborProjectBase, PageQueryBase):
-    pass
+    imported_at_start: datetime | None = Field(None, title="导入时间开始")
+    imported_at_end: datetime | None = Field(None, title="导入时间结束")
 
 
 # ============================================================

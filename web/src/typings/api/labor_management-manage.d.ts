@@ -7,10 +7,14 @@ declare namespace Api {
     // ---- LaborProject ----
     type LaborProject = Common.CommonRecord<{
       partNo: string;
+      skipPainting: boolean;
+      importedAt: number | null;
+      fmtImportedAt?: string;
     }>;
 
     type LaborProjectAddParams = {
       partNo: string;
+      skipPainting?: boolean;
     };
 
     type LaborProjectUpdateParams = { id?: string } & Partial<LaborProjectAddParams>;
@@ -18,6 +22,9 @@ declare namespace Api {
     type LaborProjectSearchParams = CommonType.RecordNullable<
       {
         partNo?: string;
+        skipPainting?: boolean;
+        importedAtStart?: string;
+        importedAtEnd?: string;
       } & CommonSearchParams
     >;
 

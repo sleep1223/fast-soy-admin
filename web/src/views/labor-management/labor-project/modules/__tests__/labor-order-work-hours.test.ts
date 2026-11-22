@@ -96,6 +96,16 @@ it('does not submit incomplete data and keeps the input when creation fails', as
   vi.clearAllMocks();
 });
 
+it('hides the create form for a project marked as requiring no painting', async () => {
+  vi.mocked(fetchGetLaborWorkHourList).mockResolvedValueOnce({ data: { records: [], total: 0 }, error: null } as never);
+  const wrapper = mount(WorkHours, { props: { orderNo: 'O1', skipPainting: true }, global: { stubs } });
+  await flushPromises();
+  expect(wrapper.find('form').exists()).toBe(false);
+  expect(fetchAddLaborWorkHour).not.toHaveBeenCalled();
+  wrapper.unmount();
+  vi.clearAllMocks();
+});
+
 it('distinguishes no matching tickets from a failed request', async () => {
   vi.mocked(fetchGetLaborWorkHourList).mockResolvedValueOnce({ data: { records: [], total: 0 }, error: null } as never);
   const wrapper = mount(WorkHours, { props: { orderNo: 'O1' }, global: { stubs } });
